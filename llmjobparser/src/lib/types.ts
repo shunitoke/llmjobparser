@@ -16,3 +16,19 @@ export type Vacancy = {
   summary: string;
   badges: string[];
 };
+
+export type VacancyBatch = {
+  vacancies: Vacancy[];
+  pending: boolean;
+  lastFetched?: number;
+};
+
+export type SearchResponse = {
+  items: Vacancy[];
+  batchStatus: {
+    [key: string]: {
+      pending: boolean;
+      refreshTriggered?: boolean;
+    };
+  };
+};

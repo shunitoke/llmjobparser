@@ -68,7 +68,11 @@ export function SearchClient() {
 
       for (const issue of parsed.error.issues) {
         const field = issue.path[0];
-        if (field === "prompt" || field === "regions" || field === "categories") {
+        if (
+          field === "prompt" ||
+          field === "regions" ||
+          field === "categories"
+        ) {
           nextErrors[field] = issue.message;
         }
       }
@@ -99,15 +103,15 @@ export function SearchClient() {
                 className={cn(fieldErrors.prompt && "border-destructive")}
               />
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   Keep it short and specific; minimum 5 characters.
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   {prompt.length}/2000
                 </p>
               </div>
               {fieldErrors.prompt ? (
-                <p className="text-sm text-destructive">{fieldErrors.prompt}</p>
+                <p className="text-destructive text-sm">{fieldErrors.prompt}</p>
               ) : null}
             </div>
 
@@ -133,7 +137,9 @@ export function SearchClient() {
               </div>
             </div>
 
-            <div className={cn("flex items-center gap-3", !showAdmin && "hidden")}>
+            <div
+              className={cn("flex items-center gap-3", !showAdmin && "hidden")}
+            >
               <Switch
                 id="includePrivate"
                 checked={includePrivate}
@@ -159,14 +165,14 @@ export function SearchClient() {
           <CardTitle className="text-lg">Results</CardTitle>
         </CardHeader>
         <CardContent>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Searching…</p>
+            <p className="text-muted-foreground text-sm">Searching…</p>
           ) : null}
 
           {!error && hasSearched && !isLoading && results.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               No vacancies found. Try a different prompt.
             </p>
           ) : null}
@@ -180,7 +186,7 @@ export function SearchClient() {
           ) : null}
 
           {!hasSearched ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Submit the form to see placeholder vacancies.
             </p>
           ) : null}
