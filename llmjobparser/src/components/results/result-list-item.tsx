@@ -29,7 +29,7 @@ export function ResultListItem({ vacancy }: { vacancy: Vacancy }) {
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-muted-foreground">{vacancy.summary}</p>
+        <p className="text-muted-foreground text-sm">{vacancy.summary}</p>
       </CardContent>
     </Card>
   );

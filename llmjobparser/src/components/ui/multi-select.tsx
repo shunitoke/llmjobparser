@@ -14,7 +14,11 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export type MultiSelectOption = {
   value: string;
@@ -79,7 +83,9 @@ export function MultiSelect({
         >
           <span className="flex min-w-0 flex-1 items-center gap-2">
             {selected.length === 0 ? (
-              <span className="truncate text-muted-foreground">{placeholder}</span>
+              <span className="text-muted-foreground truncate">
+                {placeholder}
+              </span>
             ) : (
               <span className="flex min-w-0 flex-wrap items-center gap-1">
                 {visibleBadges.map((o) => (
@@ -116,7 +122,7 @@ export function MultiSelect({
                   >
                     <span
                       className={cn(
-                        "mr-2 inline-flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                        "border-primary mr-2 inline-flex h-4 w-4 items-center justify-center rounded-sm border",
                         isSelected
                           ? "bg-primary text-primary-foreground"
                           : "opacity-50 [&_svg]:invisible",

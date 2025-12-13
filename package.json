@@ -8,5 +8,8 @@
     "start": "pnpm --filter llmjobparser start",
     "lint": "pnpm --filter llmjobparser lint",
     "format": "pnpm --filter llmjobparser format"
+  },
+  "dependencies": {
+    "@vercel/kv": "^3.0.0"
   }
 }
