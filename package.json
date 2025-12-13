@@ -1,0 +1,12 @@
+{
+  "name": "llmjobparser-repo",
+  "private": true,
+  "packageManager": "pnpm@10.25.0",
+  "scripts": {
+    "dev": "pnpm --filter llmjobparser dev",
+    "build": "pnpm --filter llmjobparser build",
+    "start": "pnpm --filter llmjobparser start",
+    "lint": "pnpm --filter llmjobparser lint",
+    "format": "pnpm --filter llmjobparser format"
+  }
+}
