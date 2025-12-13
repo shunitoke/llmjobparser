@@ -1,0 +1,19 @@
+{
+  "name": "telegram-scraper-wrapper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "node dist/index.js",
+    "trigger": "node dist/trigger.js"
+  },
+  "dependencies": {
+    "@vercel/kv": "^0.2.1",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5"
+  }
+}

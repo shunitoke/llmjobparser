@@ -1,5 +1,9 @@
 # dependencies
 node_modules
+__pycache__
+*.egg-info
+dist
+build
 
 # next
 .next
@@ -18,3 +22,19 @@ out
 
 # tooling
 *.tsbuildinfo
+
+# Python
+.pytest_cache
+.venv
+venv
+*.pyc
+*.pyo
+*.pyd
+.Python
+site-packages
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
