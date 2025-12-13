@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { ResultListItem } from "@/components/results/result-list-item";
+import { SaveSearchDialog } from "@/components/saved-searches/save-search-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -155,6 +156,15 @@ export function SearchClient() {
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? "Searching…" : "Search"}
               </Button>
+              {hasSearched && !isLoading ? (
+                <SaveSearchDialog
+                  userId="dev-user-id"
+                  prompt={prompt}
+                  regions={regions}
+                  categories={categories}
+                  includePrivate={includePrivate}
+                />
+              ) : null}
             </div>
           </form>
         </CardContent>

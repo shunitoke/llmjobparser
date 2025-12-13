@@ -66,6 +66,7 @@ The API hashes the incoming prompt and checks Vercel KV for cached parsed data:
 - TTL: 3600 seconds (1 hour)
 
 If not cached, it calls OpenRouter LLM to extract:
+
 - Keywords from the prompt
 - Desired schedule (full-time, part-time, contract, etc.)
 
@@ -104,6 +105,7 @@ Vacancies are scored in batches of 15-20 using OpenRouter LLM:
 - `src/app/api/search/route.test.ts`: Tests cache hit/miss scenarios with KV mock
 
 Run tests:
+
 ```bash
 pnpm test
 ```
@@ -120,6 +122,7 @@ KV_REST_API_TOKEN=your_vercel_kv_token
 ```
 
 Without these, the API will use fallback strategies:
+
 - Simple keyword extraction instead of LLM parsing
 - Generic "Relevant" badges instead of LLM scoring
 
