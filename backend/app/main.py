@@ -1,11 +1,13 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 import json
 import asyncio
 from datetime import datetime
+from pathlib import Path
 
 from app.database import init_db, get_db
 from app.models import SearchSession, Job
@@ -200,3 +202,8 @@ async def get_sessions(db: AsyncSession = Depends(get_db)):
     )
     sessions = result.scalars().all()
     return sessions
+
+
+static_dir = Path(__file__).resolve().parent / "static"
+if static_dir.exists():
+    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="frontend")
