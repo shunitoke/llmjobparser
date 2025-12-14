@@ -1,0 +1,14 @@
+.env
+**/.env
+jobs.db
+**/*.db
+frontend/node_modules/
+**/node_modules/
+backend/__pycache__/
+**/__pycache__/
+**/*.pyc
+.venv/
+**/.venv/
+dist/
+**/dist/
+.vscode/
