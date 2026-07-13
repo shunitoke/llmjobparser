@@ -9,6 +9,7 @@ export interface Job {
   employment_type: string | null;
   description: string | null;
   url: string;
+  published_at?: string | null;
   is_match: boolean | null;
   match_reason: string | null;
 }
@@ -31,4 +32,28 @@ export interface SearchStatus {
   current_query: string;
   scraped_count: number;
   generated_queries: string | null;
+  current_source: string;
+  candidates_count: number;
+  selected_count: number;
+}
+
+export interface CandidateJob {
+  id: number;
+  session_id: number;
+  hh_id: string;
+  title: string;
+  company: string | null;
+  salary: string | null;
+  location: string | null;
+  url: string;
+  source: string;
+  selected: boolean;
+  created_at: string;
+}
+
+export interface CandidateListResponse {
+  total: number;
+  offset: number;
+  limit: number;
+  items: CandidateJob[];
 }

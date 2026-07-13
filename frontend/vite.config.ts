@@ -10,9 +10,15 @@ export default defineConfig({
     },
   },
   server: {
+    fs: {
+      allow: [
+        path.resolve(__dirname, '.'),
+        path.resolve(__dirname, '../assets'),
+      ],
+    },
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
     },
