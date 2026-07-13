@@ -13,7 +13,7 @@ AI-powered job search tool that analyzes hh.ru vacancies based on your natural l
 
 - **Backend**: Python, FastAPI, SQLite, BeautifulSoup
 - **Frontend**: React, Vite, TailwindCSS, shadcn/ui
-- **AI**: OpenRouter API (Claude, GPT-4, etc.)
+- **AI**: GigaChat API (Sber)
 
 ## Setup
 
@@ -29,7 +29,7 @@ pip install -r requirements.txt
 
 Create `.env` file in `backend` folder:
 ```
-OPENROUTER_API_KEY=your_key_here
+GIGACHAT_AUTH_KEY=your_gigachat_authorization_key_here
 ```
 
 Run backend:
