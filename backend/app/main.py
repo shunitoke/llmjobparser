@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +29,11 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup():
     await init_db()
+
+
+@app.get("/api/health")
+async def health():
+    return {"status": "ok"}
 
 
 async def process_search(session_id: int, city: str = "", categories: list = None):
