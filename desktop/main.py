@@ -6,6 +6,20 @@ import time
 from pathlib import Path
 from threading import Thread
 
+# When packaged as a single executable, the backend is started by re-executing
+# the same binary with JOB_RADAR_BACKEND=1. This keeps the launcher and server
+# in one file while avoiding a separate backend.exe.
+if __name__ == "__main__" and os.environ.get("JOB_RADAR_BACKEND") == "1":
+    import uvicorn
+
+    uvicorn.run(
+        "app.main:app",
+        host=os.environ.get("HOST", "127.0.0.1"),
+        port=int(os.environ.get("PORT", "8000")),
+        log_level="info",
+    )
+    sys.exit(0)
+
 # Allow the launcher to be run directly as ``python desktop/main.py`` without
 # requiring PYTHONPATH to contain the project root.
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -31,10 +45,8 @@ def get_app_data_dir() -> Path:
 
 
 def get_backend_executable() -> Path:
-    if getattr(sys, "frozen", False):
-        # PyInstaller bundles backend as a one-file executable next to main.
-        return Path(os.path.dirname(sys.executable)) / "backend.exe"
-    # Development: run backend via Python module.
+    # PyInstaller single-file build re-uses the same executable for the
+    # backend by setting JOB_RADAR_BACKEND=1 in the subprocess environment.
     return Path(sys.executable)
 
 
@@ -55,7 +67,8 @@ def start_backend(port: int, app_data_dir: Path) -> subprocess.Popen:
     env["PYTHONPATH"] = os.pathsep.join(pythonpath_parts)
 
     backend_exe = get_backend_executable()
-    if backend_exe.name == "backend.exe":
+    if getattr(sys, "frozen", False):
+        env["JOB_RADAR_BACKEND"] = "1"
         args = [str(backend_exe)]
     else:
         backend_dir = Path(__file__).resolve().parent / ".." / "backend"

@@ -11,4 +11,6 @@ backend/__pycache__/
 **/.venv/
 dist/
 **/dist/
+build/
+**/build/
 .vscode/
