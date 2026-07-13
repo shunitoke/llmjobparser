@@ -2,13 +2,15 @@ import httpx
 import json
 from typing import List, Dict, Tuple
 from app.config import get_settings
+from app.key_manager import key_manager as _global_key_manager
 
 
 class LLMService:
     OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-    
+
     def __init__(self):
         self.settings = get_settings()
+        self._key_manager = _global_key_manager
     
     async def _call_llm(self, messages: List[Dict], temperature: float = 0.7) -> str:
         """Make a call to OpenRouter API"""

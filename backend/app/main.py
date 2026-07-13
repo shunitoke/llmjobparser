@@ -1,6 +1,7 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -14,6 +15,7 @@ from app.models import SearchSession, Job
 from app.schemas import SearchRequest, SearchSessionResponse, SearchStatusResponse, JobResponse
 from app.scraper import HHScraper
 from app.llm_service import LLMService
+from app.key_manager import key_manager as _key_manager
 
 app = FastAPI(title="LLM Job Parser")
 
@@ -34,6 +36,19 @@ async def startup():
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
+
+
+class GigaChatKeyPayload(BaseModel):
+    key: str
+
+
+@app.post("/api/settings/gigachat-key")
+async def set_gigachat_key(payload: GigaChatKeyPayload):
+    try:
+        _key_manager.set_key(payload.key)
+        return {"status": "ok"}
+    except ValueError as e:
+        return Response(status_code=400, content=json.dumps({"detail": str(e)}), media_type="application/json")
 
 
 async def process_search(session_id: int, city: str = "", categories: list = None):
