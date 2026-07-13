@@ -8,6 +8,10 @@ from app.config import get_settings
 
 def _get_app_data_dir() -> str:
     """Return a directory where the bundled app can write persistent data."""
+    env_dir = os.environ.get("APP_DATA_DIR")
+    if env_dir:
+        os.makedirs(env_dir, exist_ok=True)
+        return env_dir
     if getattr(sys, "frozen", False):
         # PyInstaller sets sys.frozen and sys._MEIPASS
         exe_dir = os.path.dirname(sys.executable)

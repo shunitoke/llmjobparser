@@ -224,6 +224,12 @@ async def get_sessions(db: AsyncSession = Depends(get_db)):
     return sessions
 
 
-static_dir = Path(__file__).resolve().parent / "static"
+# Serve the built frontend. In development the dist folder lives next to the
+# backend under ``frontend/dist``; when bundled, ``frontend/dist`` is copied
+# next to the executable.
+project_root = Path(__file__).resolve().parent.parent.parent
+static_dir = project_root / "frontend" / "dist"
+if not static_dir.exists():
+    static_dir = Path(__file__).resolve().parent / "static"
 if static_dir.exists():
     app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="frontend")
