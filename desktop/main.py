@@ -10,6 +10,13 @@ from threading import Thread
 # the same binary with JOB_RADAR_BACKEND=1. This keeps the launcher and server
 # in one file while avoiding a separate backend.exe.
 if __name__ == "__main__" and os.environ.get("JOB_RADAR_BACKEND") == "1":
+    # PyInstaller --windowed sets sys.stdout/stderr to None, which breaks
+    # uvicorn's logging formatter (it calls .isatty()). Redirect to devnull.
+    if sys.stdout is None:
+        sys.stdout = open(os.devnull, "w")
+    if sys.stderr is None:
+        sys.stderr = open(os.devnull, "w")
+
     import uvicorn
 
     uvicorn.run(
