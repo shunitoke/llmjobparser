@@ -11,11 +11,15 @@ from threading import Thread
 # in one file while avoiding a separate backend.exe.
 if __name__ == "__main__" and os.environ.get("JOB_RADAR_BACKEND") == "1":
     # PyInstaller --windowed sets sys.stdout/stderr to None, which breaks
-    # uvicorn's logging formatter (it calls .isatty()). Redirect to devnull.
-    if sys.stdout is None:
-        sys.stdout = open(os.devnull, "w")
-    if sys.stderr is None:
-        sys.stderr = open(os.devnull, "w")
+    # uvicorn's logging formatter (it calls .isatty()). Prefer the inherited
+    # pipe handles (set by the launcher via subprocess.PIPE) so logs still
+    # reach the launcher's log stream; fall back to devnull if unavailable.
+    for _fd, _attr in ((1, "stdout"), (2, "stderr")):
+        if getattr(sys, _attr, None) is None:
+            try:
+                setattr(sys, _attr, os.fdopen(_fd, "w", encoding="utf-8", closefd=False))
+            except OSError:
+                setattr(sys, _attr, open(os.devnull, "w", encoding="utf-8"))
 
     import uvicorn
 
@@ -85,6 +89,7 @@ def start_backend(port: int, app_data_dir: Path) -> subprocess.Popen:
         args,
         cwd=str(backend_exe.parent),
         env=env,
+        stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -119,10 +124,9 @@ def main() -> None:
     app_data_dir.mkdir(parents=True, exist_ok=True)
 
     bridge = ApiBridge(app_data_dir=app_data_dir)
-    stored_key = bridge._store.get_key()
-    if stored_key:
-        os.environ["GIGACHAT_AUTH_KEY"] = stored_key
-
+    # The GigaChat key is no longer seeded into the process environment. The
+    # desktop UI POSTs it to /api/settings/gigachat-key where it becomes the
+    # key_manager runtime override; see frontend/src/lib/desktop.ts.
     port = get_free_port()
     process = start_backend(port, app_data_dir)
 
@@ -140,7 +144,7 @@ def main() -> None:
         height=800,
         min_size=(900, 600),
     )
-    window.expose(bridge.get_key_status, bridge.set_key, bridge.open_external_link)
+    window.expose(bridge.getKeyStatus, bridge.setKey, bridge.openExternalLink)
 
     try:
         webview.start(debug=False)

@@ -13,15 +13,37 @@ export function ApiKeySettings({ onSaved }: { onSaved?: () => void }) {
     const api = getDesktopApi();
     if (!api) return;
     setStatus('saving');
-    const result = await api.setKey(key);
-    if (result.status === 'ok') {
-      setStatus('ok');
-      setKey('');
-      onSaved?.();
-    } else {
+    // 1. Persist the key locally (keyring/DPAPI) so it survives restarts.
+    const settled = await api.setKey(key);
+    if (settled.status !== 'ok') {
       setStatus('error');
-      setMessage(result.message || 'Не удалось сохранить ключ');
+      setMessage(settled.message || 'Не удалось сохранить ключ');
+      return;
     }
+    // 2. Push the key to the running backend so the key_manager learns it
+    //    without requiring a restart. Same-origin /api is correct in desktop mode
+    //    (the SPA is served by the backend itself).
+    try {
+      const res = await fetch('/api/settings/gigachat-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.detail || `HTTP ${res.status}`);
+      }
+    } catch (e) {
+      // Local storage succeeded, but the live backend did not accept it. The
+      // user can restart the app; meanwhile surface the issue.
+      setStatus('error');
+      setMessage('Ключ сохранён, но не передан в бэкенд: ' + (e as Error).message);
+      return;
+    }
+
+    setStatus('ok');
+    setKey('');
+    onSaved?.();
   };
 
   return (

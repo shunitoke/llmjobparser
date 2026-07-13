@@ -1,5 +1,6 @@
-from fastapi import FastAPI, Depends, HTTPException, Response
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,7 +49,7 @@ async def set_gigachat_key(payload: GigaChatKeyPayload):
         _key_manager.set_key(payload.key)
         return {"status": "ok"}
     except ValueError as e:
-        return Response(status_code=400, content=json.dumps({"detail": str(e)}), media_type="application/json")
+        return JSONResponse(status_code=400, content={"detail": str(e)})
 
 
 async def process_search(session_id: int, city: str = "", categories: list = None):

@@ -6,20 +6,23 @@ from desktop.key_store import KeyStore
 
 
 class ApiBridge:
-    def __init__(self, app_data_dir: Path):
-        self._store = KeyStore(app_name="JobRadar", fallback_dir=app_data_dir)
+    def __init__(self, app_data_dir: Path, app_name: str = "JobRadar"):
+        self._store = KeyStore(app_name=app_name, fallback_dir=app_data_dir)
 
-    def get_key_status(self) -> dict[str, Any]:
+    def getKeyStatus(self) -> dict[str, Any]:
         key = self._store.get_key()
         return {"configured": bool(key)}
 
-    def set_key(self, key: str) -> dict[str, Any]:
+    def setKey(self, key: str) -> dict[str, Any]:
         try:
             self._store.set_key(key)
             return {"status": "ok"}
         except ValueError as e:
             return {"status": "error", "message": str(e)}
 
-    def open_external_link(self, url: str) -> None:
+    def openExternalLink(self, url: str) -> None:
         if url and url.startswith(("http://", "https://")):
             webbrowser.open(url)
+
+    def getStoredKey(self) -> str | None:
+        return self._store.get_key()

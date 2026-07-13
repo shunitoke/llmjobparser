@@ -5,11 +5,7 @@ $root = Split-Path -Parent $MyInvocation.MyCommand.Path | Split-Path -Parent
 Push-Location $root
 
 try {
-    Write-Host "Building frontend..." -ForegroundColor Cyan
-    $frontendDir = Join-Path $root "frontend"
-    npm --prefix $frontendDir run build
-
-    Write-Host "Building desktop executable..." -ForegroundColor Cyan
+    Write-Host "Building desktop executable (includes frontend build)..." -ForegroundColor Cyan
     $backendVenv = Join-Path $root "backend\.venv\Scripts\python.exe"
     & $backendVenv -m pip install -r (Join-Path $root "desktop\requirements.txt")
     & $backendVenv (Join-Path $root "desktop\build.py")
