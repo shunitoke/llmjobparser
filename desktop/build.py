@@ -23,7 +23,7 @@ def build() -> None:
             sys.executable,
             "-m",
             "PyInstaller",
-            str(desktop_dir / "jobradar.spec"),
+            str(desktop_dir / "vibejob.spec"),
             "--clean",
             "--noconfirm",
             "--distpath",
@@ -35,7 +35,7 @@ def build() -> None:
         check=True,
     )
 
-    print(f"Done: {dist_dir / 'JobRadar.exe'}")
+    print(f"Done: {dist_dir / 'vibejob.exe'}")
 
 
 if __name__ == "__main__":

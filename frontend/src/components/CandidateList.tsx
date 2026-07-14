@@ -8,12 +8,12 @@ interface CandidateListProps {
   total: number;
   offset: number;
   limit: number;
-  readyOnly: boolean | null;
+  selectedOnly: boolean | null;
   loading: boolean;
   isVisible: boolean;
   onVisibilityChange: () => void;
-  onReadyOnlyChange: (readyOnly: boolean | null) => void;
-  onLoad: (offset: number, readyOnly: boolean | null) => void;
+  onSelectedOnlyChange: (selectedOnly: boolean | null) => void;
+  onLoad: (offset: number, selectedOnly: boolean | null) => void;
 }
 
 export function CandidateList({
@@ -21,11 +21,11 @@ export function CandidateList({
   total,
   offset,
   limit,
-  readyOnly,
+  selectedOnly,
   loading,
   isVisible,
   onVisibilityChange,
-  onReadyOnlyChange,
+  onSelectedOnlyChange,
   onLoad,
 }: CandidateListProps) {
   return (
@@ -41,23 +41,26 @@ export function CandidateList({
     >
       <summary className="flex cursor-pointer list-none items-center justify-between p-4 marker:hidden">
         <div>
-          <h3 className="text-base font-semibold">Посмотреть найденные вакансии</h3>
+          <h3 className="text-base font-semibold">Найденные вакансии</h3>
           <p className="text-sm text-muted-foreground">Предварительный список до финального отбора</p>
         </div>
-        <span className="pointer-events-none rounded-md border border-input bg-background px-3 py-1 text-xs font-medium" aria-hidden="true">
+        <span
+          className="pointer-events-none rounded-md border border-input bg-background px-3 py-1 text-xs font-medium"
+          aria-hidden="true"
+        >
           {isVisible ? 'Скрыть' : 'Показать'}
         </span>
       </summary>
       <div className="border-t p-4 pt-0">
         <div className="mt-4 space-y-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted-foreground">Готовность:</span>
+            <span className="text-xs text-muted-foreground">Фильтр:</span>
             <Button
               type="button"
-              variant={readyOnly === null ? 'default' : 'outline'}
+              variant={selectedOnly === null ? 'default' : 'outline'}
               size="sm"
               onClick={() => {
-                onReadyOnlyChange(null);
+                onSelectedOnlyChange(null);
                 onLoad(0, null);
               }}
             >
@@ -65,42 +68,25 @@ export function CandidateList({
             </Button>
             <Button
               type="button"
-              variant={readyOnly === true ? 'default' : 'outline'}
+              variant={selectedOnly === true ? 'default' : 'outline'}
               size="sm"
               onClick={() => {
-                onReadyOnlyChange(true);
+                onSelectedOnlyChange(true);
                 onLoad(0, true);
               }}
             >
-              Готовые
-            </Button>
-            <Button
-              type="button"
-              variant={readyOnly === false ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => {
-                onReadyOnlyChange(false);
-                onLoad(0, false);
-              }}
-            >
-              В работе
+              Отобранные
             </Button>
           </div>
 
           <div className="flex items-center justify-between gap-2">
             <div className="text-sm text-muted-foreground">Список кандидатов</div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => onLoad(offset, readyOnly)}
-              disabled={loading}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={() => onLoad(offset, selectedOnly)} disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Обновить'}
             </Button>
           </div>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <div className="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <div>
               {total > 0 ? (
                 <span>
@@ -115,7 +101,7 @@ export function CandidateList({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => onLoad(Math.max(0, offset - limit), readyOnly)}
+                onClick={() => onLoad(Math.max(0, offset - limit), selectedOnly)}
                 disabled={loading || offset <= 0}
               >
                 Назад
@@ -124,7 +110,7 @@ export function CandidateList({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => onLoad(offset + limit, readyOnly)}
+                onClick={() => onLoad(offset + limit, selectedOnly)}
                 disabled={loading || offset + limit >= total}
               >
                 Вперёд

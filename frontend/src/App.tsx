@@ -1,22 +1,25 @@
-import { useCallback, useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ApiKeySettings } from '@/components/ApiKeySettings';
 import { CandidateList } from '@/components/CandidateList';
 import { FirstRunKeyPrompt } from '@/components/FirstRunKeyPrompt';
 import { Logo } from '@/components/Logo';
-import { ResultsList } from '@/components/ResultsList';
+import { ResumeUpload } from '@/components/ResumeUpload';
+import { TelegramChannelsSettings } from '@/components/TelegramChannelsSettings';
+import { ResultsList, ResultsSort, ResultsTab } from '@/components/ResultsList';
 import { SearchForm } from '@/components/SearchForm';
 import { SourceLogos } from '@/components/SourceLogos';
+import { SourceStatusSheet } from '@/components/SourceStatusSheet';
 import { StatusPanel } from '@/components/StatusPanel';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { getDesktopApi, isDesktop } from '@/lib/desktop';
+import { isDesktop, waitForDesktopApi } from '@/lib/desktop';
+import { getJobSource } from '@/lib/sources';
 import { cancelSearch, createSearch, getCandidates, getSearchSession, getSearchStatus } from './api';
 import { CandidateJob, Job, SearchSession, SearchStatus } from './types';
 
 type SearchMode = 'ru' | 'global' | 'telegram';
-type MatchedSort = 'date' | 'source' | 'location';
 
 const THEME_COLOR_LIGHT = '#f4f6f5';
 const THEME_COLOR_DARK = '#0f172a';
@@ -25,7 +28,8 @@ function App() {
   const [prompt, setPrompt] = useState('');
   const [cityPreset, setCityPreset] = useState('Любой город');
   const [searchMode, setSearchMode] = useState<SearchMode>('ru');
-  const [matchedSort, setMatchedSort] = useState<MatchedSort>('date');
+  const [sort, setSort] = useState<ResultsSort>('relevance');
+  const [selectedTab, setSelectedTab] = useState<ResultsTab>('matched');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isDark, setIsDark] = useState(false);
   const [showSourceLogos, setShowSourceLogos] = useState(true);
@@ -37,12 +41,13 @@ function App() {
   const [candidateTotal, setCandidateTotal] = useState(0);
   const [candidateOffset, setCandidateOffset] = useState(0);
   const [candidateLimit] = useState(50);
-  const [candidateReadyOnly, setCandidateReadyOnly] = useState<boolean | null>(null);
+  const [candidateSelectedOnly, setCandidateSelectedOnly] = useState<boolean | null>(null);
   const [candidateLoading, setCandidateLoading] = useState(false);
   const [showCandidatesPanel, setShowCandidatesPanel] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [showSourceSheet, setShowSourceSheet] = useState(false);
   const [keyConfigured, setKeyConfigured] = useState<boolean | null>(null);
   const [showKeySettings, setShowKeySettings] = useState(false);
+  const [showTelegramSettings, setShowTelegramSettings] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('theme');
@@ -71,22 +76,29 @@ function App() {
       setKeyConfigured(true);
       return;
     }
-    getDesktopApi()?.getKeyStatus().then((status) => {
-      setKeyConfigured(status.configured);
+    waitForDesktopApi().then((api) => {
+      if (!api) {
+        setKeyConfigured(false);
+        return;
+      }
+      api.getKeyStatus().then((s) => {
+        setKeyConfigured(s.configured);
+      });
     });
   }, []);
 
   const loadCandidates = useCallback(
-    async (sessionId: number, offset: number, readyOnly: boolean | null) => {
+    async (sessionId: number, offset: number, selectedOnly: boolean | null) => {
       setCandidateLoading(true);
       try {
-        const res = await getCandidates(sessionId, offset, candidateLimit, null, readyOnly, 'date');
+        const res = await getCandidates(sessionId, offset, candidateLimit, selectedOnly, null, 'created_at');
         setCandidateItems(res.items);
         setCandidateTotal(res.total);
         setCandidateOffset(res.offset);
       } catch (e) {
         setCandidateItems([]);
         setCandidateTotal(0);
+        setCandidateOffset(0);
       } finally {
         setCandidateLoading(false);
       }
@@ -100,12 +112,13 @@ function App() {
         const newStatus = await getSearchStatus(sessionId);
         setStatus(newStatus);
         if (newStatus.status === 'collecting_candidates' || newStatus.status === 'selecting') {
-          if (candidateOffset === 0) loadCandidates(sessionId, candidateOffset, candidateReadyOnly);
+          if (candidateOffset === 0) loadCandidates(sessionId, candidateOffset, candidateSelectedOnly);
         }
         if (newStatus.status === 'completed') {
           const session = await getSearchSession(sessionId);
           setCurrentSession(session);
           setIsLoading(false);
+          setSelectedTab('matched');
         } else if (newStatus.status === 'cancelled' || newStatus.status === 'failed') {
           setIsLoading(false);
         } else {
@@ -116,7 +129,7 @@ function App() {
         setIsLoading(false);
       }
     },
-    [candidateOffset, candidateReadyOnly, loadCandidates]
+    [candidateOffset, candidateSelectedOnly, loadCandidates]
   );
 
   const handleSearch = async () => {
@@ -129,12 +142,14 @@ function App() {
     setCandidateItems([]);
     setCandidateTotal(0);
     setCandidateOffset(0);
-    setCandidateReadyOnly(null);
-    setSelectedLocation(null);
+    setCandidateSelectedOnly(null);
+    setSort('relevance');
+    setSelectedTab('matched');
     try {
       const cityToSend = cityPreset === 'Любой город' ? '' : cityPreset;
       const session = await createSearch(prompt, cityToSend, selectedCategories, searchMode);
       setCurrentSession(session);
+      setShowCandidatesPanel(true);
       loadCandidates(session.id, 0, null);
       pollStatus(session.id);
     } catch (err) {
@@ -161,34 +176,37 @@ function App() {
     }
   };
 
-  const matchedJobs = currentSession?.jobs.filter((j) => j.is_match === true) || [];
-  const unmatchedJobs = currentSession?.jobs.filter((j) => j.is_match === false) || [];
-  const filteredMatchedJobs = selectedLocation
-    ? matchedJobs.filter((job) => normalizeLocation(job.location) === selectedLocation)
-    : matchedJobs;
-  const sortedMatchedJobs = sortJobs(filteredMatchedJobs, matchedSort);
-  const sortedUnmatchedJobs = sortJobs(unmatchedJobs, matchedSort);
-  const canShowCityMap =
-    searchMode === 'ru' &&
-    cityPreset !== 'Любой город' &&
-    cityPreset !== 'Удаленно' &&
-    !cityPreset.startsWith('---');
-  const cityMapUrl = canShowCityMap
-    ? `https://yandex.ru/map-widget/v1/?text=${encodeURIComponent(cityPreset)}&z=11&l=map`
-    : '';
-  const locationPins = buildLocationPins(matchedJobs).slice(0, 12);
+  const sortedJobs = useMemo(() => {
+    const jobs = currentSession?.jobs ?? [];
+    return sortJobs(jobs, sort);
+  }, [currentSession?.jobs, sort]);
+
+  const matchedJobs = useMemo(() => sortedJobs.filter((j) => j.is_match === true), [sortedJobs]);
+  const unmatchedJobs = useMemo(() => sortedJobs.filter((j) => j.is_match === false), [sortedJobs]);
+  const allJobs = sortedJobs;
+
   const activeSessionId = status?.id ?? currentSession?.id;
   const canCancel = Boolean(
     status && status.status !== 'completed' && status.status !== 'cancelled' && status.status !== 'failed'
   );
-  const hasSecondaryContent = Boolean(activeSessionId);
 
   if (keyConfigured === null) {
-    return null;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   if (keyConfigured === false) {
-    return <FirstRunKeyPrompt onSaved={() => setKeyConfigured(true)} />;
+    return (
+      <FirstRunKeyPrompt
+        onSaved={(resumePrompt) => {
+          setKeyConfigured(true);
+          if (resumePrompt) setPrompt(resumePrompt);
+        }}
+      />
+    );
   }
 
   return (
@@ -204,11 +222,17 @@ function App() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <Logo />
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowSourceSheet(true)}>
+              Источники
+            </Button>
             {isDesktop() && (
               <Button variant="outline" size="sm" onClick={() => setShowKeySettings(true)}>
                 Ключ API
               </Button>
             )}
+            <Button variant="outline" size="sm" onClick={() => setShowTelegramSettings(true)}>
+              TG-каналы
+            </Button>
             <ThemeToggle isDark={isDark} onToggle={toggleTheme} />
           </div>
         </div>
@@ -222,10 +246,7 @@ function App() {
           aria-labelledby="key-settings-title"
           onClick={() => setShowKeySettings(false)}
         >
-          <Card
-            className="relative w-full max-w-md"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <Card className="relative w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <Button
               variant="ghost"
               size="icon"
@@ -236,17 +257,52 @@ function App() {
               <X className="h-4 w-4" />
             </Button>
             <CardHeader>
-              <CardTitle id="key-settings-title">Ключ API GigaChat</CardTitle>
-              <CardDescription>
-                Ключ используется для анализа вакансий в десктопном приложении.
-              </CardDescription>
+              <CardTitle id="key-settings-title">Настройки API</CardTitle>
+              <CardDescription>Ключ используется для анализа вакансий. Хранится только на этом компьютере.</CardDescription>
             </CardHeader>
             <CardContent>
-              <ApiKeySettings onSaved={() => setShowKeySettings(false)} />
+              <ApiKeySettings
+                onSaved={() => setShowKeySettings(false)}
+                onDeleted={() => {
+                  setShowKeySettings(false);
+                  setKeyConfigured(false);
+                }}
+              />
             </CardContent>
           </Card>
         </div>
       )}
+
+      {showTelegramSettings && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-background/80 px-4 py-12 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="telegram-settings-title"
+          onClick={() => setShowTelegramSettings(false)}
+        >
+          <Card className="relative w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-2 h-8 w-8"
+              onClick={() => setShowTelegramSettings(false)}
+              aria-label="Закрыть"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            <CardHeader>
+              <CardTitle id="telegram-settings-title">Telegram-каналы</CardTitle>
+              <CardDescription>Настройте каналы, из которых vibejob собирает вакансии.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TelegramChannelsSettings />
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      <SourceStatusSheet open={showSourceSheet} onClose={() => setShowSourceSheet(false)} />
 
       <main
         id="main-content"
@@ -256,11 +312,15 @@ function App() {
         <div className="mb-8">
           <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
             Опишите работу мечты —{' '}
-            <span className="text-primary">мы найдём вакансии</span>
+            <span className="text-primary">vibejob найдёт вакансии</span>
           </h1>
           <p className="mt-2 text-sm text-muted-foreground sm:text-base">
             Пишите по-человечески: роль, график, удалёнка, зарплата, город или пожелания.
           </p>
+        </div>
+
+        <div className="mb-6">
+          <ResumeUpload onParsed={(p) => setPrompt(p)} />
         </div>
 
         <SearchForm
@@ -283,7 +343,7 @@ function App() {
         <div
           className={`flex justify-center overflow-hidden transition-[max-height,opacity,transform,margin] duration-300 ease-in-out motion-reduce:transition-none ${
             !showSourceLogos
-              ? 'mb-0 mt-0 max-h-0 opacity-0 -translate-y-2 pointer-events-none'
+              ? 'pointer-events-none mb-0 mt-0 max-h-0 opacity-0 -translate-y-2'
               : 'mb-10 mt-4 max-h-40 opacity-100 translate-y-0'
           }`}
           aria-hidden={!showSourceLogos}
@@ -291,164 +351,77 @@ function App() {
           <SourceLogos />
         </div>
 
-        <div
-          className={`${
-            hasSecondaryContent ? 'grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]' : ''
-          }`}
-        >
-          <div className="min-w-0">
-            {error && (
-              <Card className="mb-8 border-destructive">
-                <CardContent className="pt-6 text-destructive">{error}</CardContent>
-              </Card>
-            )}
-            {status && status.status !== 'completed' && <StatusPanel status={status} />}
-            <ResultsList
-              isCompleted={status?.status === 'completed'}
-              matchedJobs={matchedJobs}
-              unmatchedJobs={unmatchedJobs}
-              sortedMatchedJobs={sortedMatchedJobs}
-              sortedUnmatchedJobs={sortedUnmatchedJobs}
-              matchedSort={matchedSort}
-              onMatchedSortChange={setMatchedSort}
+        {error && (
+          <Card className="mb-8 border-destructive">
+            <CardContent className="pt-6 text-destructive">{error}</CardContent>
+          </Card>
+        )}
+
+        {status && status.status !== 'completed' && <StatusPanel status={status} />}
+
+        <ResultsList
+          isCompleted={status?.status === 'completed'}
+          matchedJobs={matchedJobs}
+          unmatchedJobs={unmatchedJobs}
+          allJobs={allJobs}
+          sort={sort}
+          selectedTab={selectedTab}
+          onSortChange={setSort}
+          onTabChange={setSelectedTab}
+        />
+
+        {activeSessionId && (
+          <div className="mt-10">
+            <CandidateList
+              items={candidateItems}
+              total={candidateTotal}
+              offset={candidateOffset}
+              limit={candidateLimit}
+              selectedOnly={candidateSelectedOnly}
+              loading={candidateLoading}
+              isVisible={showCandidatesPanel}
+              onVisibilityChange={() => setShowCandidatesPanel((prev) => !prev)}
+              onSelectedOnlyChange={setCandidateSelectedOnly}
+              onLoad={(offset, selectedOnly) => loadCandidates(activeSessionId, offset, selectedOnly)}
             />
           </div>
-
-          {activeSessionId && (
-            <aside className="min-w-0">
-              <div className="lg:sticky lg:top-6">
-                {canShowCityMap && (
-                  <Card className="mb-4">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Карта города</CardTitle>
-                      <CardDescription>Город из текущего запроса</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="overflow-hidden rounded-lg border border-input">
-                        <iframe
-                          title={`Карта ${cityPreset}`}
-                          src={cityMapUrl}
-                          className="h-56 w-full lg:h-72"
-                          loading="lazy"
-                          referrerPolicy="no-referrer-when-downgrade"
-                        />
-                      </div>
-                      {locationPins.length > 0 && (
-                        <div className="mt-4">
-                          <div className="flex items-center justify-between gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                            <span>Пины по адресам</span>
-                            {selectedLocation && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setSelectedLocation(null)}
-                              >
-                                Сбросить фильтр
-                              </Button>
-                            )}
-                          </div>
-                          <div className="mt-2 space-y-2">
-                            {locationPins.map((pin) => (
-                              <button
-                                type="button"
-                                key={pin.label}
-                                className={`flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition ${
-                                  selectedLocation === normalizeLocation(pin.label)
-                                    ? 'border-primary/60 bg-primary/10 text-primary'
-                                    : 'border-input/60 bg-muted/40 hover:border-primary/40'
-                                }`}
-                                onClick={() => setSelectedLocation(normalizeLocation(pin.label))}
-                              >
-                                <span className="truncate">{pin.label}</span>
-                                <span className="ml-3 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                                  {pin.count}
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-                <CandidateList
-                  items={candidateItems}
-                  total={candidateTotal}
-                  offset={candidateOffset}
-                  limit={candidateLimit}
-                  readyOnly={candidateReadyOnly}
-                  loading={candidateLoading}
-                  isVisible={showCandidatesPanel}
-                  onVisibilityChange={() => setShowCandidatesPanel((prev) => !prev)}
-                  onReadyOnlyChange={setCandidateReadyOnly}
-                  onLoad={(offset, readyOnly) => loadCandidates(activeSessionId, offset, readyOnly)}
-                />
-              </div>
-            </aside>
-          )}
-        </div>
+        )}
       </main>
+
+      <footer className="border-t py-4 text-center text-xs text-muted-foreground">
+        <a href="https://t.me/fastmvpbot" target="_blank" rel="noopener noreferrer" className="hover:underline">@fastmvpbot</a>
+      </footer>
     </div>
   );
-}
-
-function getJobSource(job: Job) {
-  const id = (job.hh_id || '').toLowerCase();
-  if (id.startsWith('hh:')) return 'HH.ru';
-  if (id.startsWith('rabota:')) return 'Rabota.ru';
-  if (id.startsWith('sj:')) return 'SuperJob';
-  if (id.startsWith('tg:')) return 'Telegram';
-  if (id.startsWith('remoteok:')) return 'RemoteOK';
-  if (id.startsWith('wwr:')) return 'We Work Remotely';
-  if (id.startsWith('4dw:')) return '4DayWeek';
-  if (id.startsWith('djinni:')) return 'Djinni';
-  const url = (job.url || '').toLowerCase();
-  if (url.includes('rabota.ru')) return 'Rabota.ru';
-  if (url.includes('hh.ru')) return 'HH.ru';
-  if (url.includes('superjob.ru')) return 'SuperJob';
-  if (url.includes('t.me/')) return 'Telegram';
-  if (url.includes('remoteok.com')) return 'RemoteOK';
-  if (url.includes('weworkremotely.com')) return 'We Work Remotely';
-  if (url.includes('4dayweek.io')) return '4DayWeek';
-  if (url.includes('djinni.co')) return 'Djinni';
-  return 'Источник';
 }
 
 function normalizeLocation(value?: string | null) {
   return (value ?? '').trim().toLocaleLowerCase();
 }
+
 function toDateMs(value?: string | null) {
   const ms = Date.parse(value ?? '');
   return Number.isFinite(ms) ? ms : 0;
 }
-function sortJobs(jobs: Job[], matchedSort: MatchedSort) {
+
+function sortJobs(jobs: Job[], sort: ResultsSort) {
   return [...jobs].sort((a, b) => {
-    if (matchedSort === 'source') {
+    if (sort === 'relevance') {
+      const ma = a.is_match === true ? 1 : a.is_match === false ? -1 : 0;
+      const mb = b.is_match === true ? 1 : b.is_match === false ? -1 : 0;
+      if (ma !== mb) return mb - ma;
+    }
+    if (sort === 'source') {
       const c = getJobSource(a).localeCompare(getJobSource(b), 'ru');
       if (c !== 0) return c;
     }
-    if (matchedSort === 'location') {
+    if (sort === 'location') {
       const c = normalizeLocation(a.location).localeCompare(normalizeLocation(b.location), 'ru');
       if (c !== 0) return c;
     }
     const dateDifference = toDateMs(b.published_at) - toDateMs(a.published_at);
     return dateDifference || b.id - a.id;
   });
-}
-function buildLocationPins(jobs: Job[]) {
-  const map = new Map<string, { label: string; count: number }>();
-  for (const job of jobs) {
-    const raw = job.location ?? '';
-    const key = normalizeLocation(raw);
-    if (!key) continue;
-    const prev = map.get(key);
-    if (prev) prev.count += 1;
-    else map.set(key, { label: raw.trim(), count: 1 });
-  }
-  return Array.from(map.values()).sort(
-    (a, b) => b.count - a.count || a.label.localeCompare(b.label, 'ru')
-  );
 }
 
 export default App;

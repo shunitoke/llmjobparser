@@ -7,9 +7,9 @@ from pathlib import Path
 from threading import Thread
 
 # When packaged as a single executable, the backend is started by re-executing
-# the same binary with JOB_RADAR_BACKEND=1. This keeps the launcher and server
+# the same binary with VIBEJOB_BACKEND=1. This keeps the launcher and server
 # in one file while avoiding a separate backend.exe.
-if __name__ == "__main__" and os.environ.get("JOB_RADAR_BACKEND") == "1":
+if __name__ == "__main__" and os.environ.get("VIBEJOB_BACKEND") == "1":
     # PyInstaller --windowed sets sys.stdout/stderr to None, which breaks
     # uvicorn's logging formatter (it calls .isatty()). Prefer the inherited
     # pipe handles (set by the launcher via subprocess.PIPE) so logs still
@@ -51,13 +51,13 @@ def get_free_port() -> int:
 
 def get_app_data_dir() -> Path:
     if getattr(sys, "frozen", False):
-        return Path(os.path.dirname(sys.executable)) / "job-radar-data"
+        return Path(os.path.dirname(sys.executable)) / "vibejob-data"
     return Path(__file__).resolve().parent / ".." / "backend"
 
 
 def get_backend_executable() -> Path:
     # PyInstaller single-file build re-uses the same executable for the
-    # backend by setting JOB_RADAR_BACKEND=1 in the subprocess environment.
+    # backend by setting VIBEJOB_BACKEND=1 in the subprocess environment.
     return Path(sys.executable)
 
 
@@ -79,7 +79,7 @@ def start_backend(port: int, app_data_dir: Path) -> subprocess.Popen:
 
     backend_exe = get_backend_executable()
     if getattr(sys, "frozen", False):
-        env["JOB_RADAR_BACKEND"] = "1"
+        env["VIBEJOB_BACKEND"] = "1"
         args = [str(backend_exe)]
     else:
         backend_dir = Path(__file__).resolve().parent / ".." / "backend"
@@ -138,13 +138,13 @@ def main() -> None:
         raise RuntimeError("Backend failed to start")
 
     window = webview.create_window(
-        "Job Radar",
-        f"http://127.0.0.1:{port}/",
+        "vibejob",
+        f"http://127.0.0.1:{port}/?desktop=1",
         width=1280,
         height=800,
         min_size=(900, 600),
     )
-    window.expose(bridge.getKeyStatus, bridge.setKey, bridge.openExternalLink)
+    window.expose(bridge.getKeyStatus, bridge.setKey, bridge.deleteKey, bridge.getStoredKey, bridge.openExternalLink)
 
     try:
         webview.start(debug=False)

@@ -1,36 +1,52 @@
 import { Job } from '../types';
 import { JobCard } from './JobCard';
 
-type MatchedSort = 'date' | 'source' | 'location';
+export type ResultsTab = 'matched' | 'all' | 'unmatched';
+export type ResultsSort = 'relevance' | 'date' | 'source' | 'location';
 
 interface ResultsListProps {
   isCompleted: boolean;
   matchedJobs: Job[];
   unmatchedJobs: Job[];
-  sortedMatchedJobs: Job[];
-  sortedUnmatchedJobs: Job[];
-  matchedSort: MatchedSort;
-  onMatchedSortChange: (value: MatchedSort) => void;
+  allJobs: Job[];
+  sort: ResultsSort;
+  selectedTab: ResultsTab;
+  onSortChange: (value: ResultsSort) => void;
+  onTabChange: (value: ResultsTab) => void;
 }
+
+const SORT_OPTIONS: Array<{ value: ResultsSort; label: string }> = [
+  { value: 'relevance', label: 'По релевантности' },
+  { value: 'date', label: 'По дате' },
+  { value: 'source', label: 'По источнику' },
+  { value: 'location', label: 'По адресу' },
+];
+
+const TABS: Array<{ value: ResultsTab; label: string; count?: number }> = [
+  { value: 'matched', label: 'Подходят' },
+  { value: 'all', label: 'Все' },
+  { value: 'unmatched', label: 'Не подходят' },
+];
 
 export function ResultsList({
   isCompleted,
   matchedJobs,
   unmatchedJobs,
-  sortedMatchedJobs,
-  sortedUnmatchedJobs,
-  matchedSort,
-  onMatchedSortChange,
+  allJobs,
+  sort,
+  selectedTab,
+  onSortChange,
+  onTabChange,
 }: ResultsListProps) {
-  const total = matchedJobs.length + unmatchedJobs.length;
+  const visibleJobs = selectedTab === 'matched' ? matchedJobs : selectedTab === 'unmatched' ? unmatchedJobs : allJobs;
   const hasResults = matchedJobs.length > 0 || unmatchedJobs.length > 0;
+  const total = matchedJobs.length + unmatchedJobs.length;
 
   return (
-    <>
+    <section aria-label="Результаты поиска">
       {isCompleted && hasResults && (
-        <p className="mb-6 text-sm text-muted-foreground" aria-live="polite">
-          Найдено <strong className="text-foreground">{matchedJobs.length}</strong> подходящих вакансий из{' '}
-          {total}
+        <p className="mb-4 text-sm text-muted-foreground" aria-live="polite">
+          Найдено <strong className="text-foreground">{matchedJobs.length}</strong> подходящих вакансий из {total}
         </p>
       )}
 
@@ -43,10 +59,44 @@ export function ResultsList({
         </div>
       )}
 
-      {matchedJobs.length > 0 && (
+      {hasResults && (
         <div className="mb-8 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-semibold">Подходящие вакансии</h2>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div
+              role="tablist"
+              aria-label="Фильтр результатов"
+              className="inline-flex flex-wrap gap-2"
+            >
+              {TABS.map((tab) => {
+                const active = selectedTab === tab.value;
+                const count =
+                  tab.value === 'matched' ? matchedJobs.length : tab.value === 'unmatched' ? unmatchedJobs.length : total;
+                return (
+                  <button
+                    key={tab.value}
+                    role="tab"
+                    aria-selected={active}
+                    type="button"
+                    onClick={() => onTabChange(tab.value)}
+                    className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors ${
+                      active
+                        ? 'border-transparent bg-primary text-primary-foreground'
+                        : 'border-input bg-background hover:bg-muted'
+                    }`}
+                  >
+                    {tab.label}
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                        active ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="flex items-center gap-2 text-sm">
               <label htmlFor="result-sort" className="text-muted-foreground">
                 Сортировка:
@@ -54,38 +104,28 @@ export function ResultsList({
               <select
                 id="result-sort"
                 name="result-sort"
-                value={matchedSort}
-                onChange={(e) => onMatchedSortChange(e.target.value as MatchedSort)}
+                value={sort}
+                onChange={(e) => onSortChange(e.target.value as ResultsSort)}
                 className="h-9 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <option value="date">По дате</option>
-                <option value="source">По источнику</option>
-                <option value="location">По адресу</option>
+                {SORT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
-          {sortedMatchedJobs.map((job) => (
-            <JobCard key={job.id} job={job} isMatch={true} />
-          ))}
+
+          <div className="space-y-4" role="tabpanel" aria-label={TABS.find((t) => t.value === selectedTab)?.label}>
+            {visibleJobs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Нет вакансий в этой категории.</p>
+            ) : (
+              visibleJobs.map((job) => <JobCard key={job.id} job={job} />)
+            )}
+          </div>
         </div>
       )}
-
-      {unmatchedJobs.length > 0 && (
-        <details className="group rounded-lg border border-input/60 bg-muted/20">
-          <summary className="flex cursor-pointer list-none items-center justify-between p-4 marker:hidden">
-            <h2 className="text-base font-semibold text-muted-foreground">
-              Не подошли ({unmatchedJobs.length})
-            </h2>
-            <span className="text-xs text-muted-foreground group-open:hidden">Показать</span>
-            <span className="hidden text-xs text-muted-foreground group-open:inline">Скрыть</span>
-          </summary>
-          <div className="space-y-4 border-t p-4 pt-0">
-            {sortedUnmatchedJobs.map((job) => (
-              <JobCard key={job.id} job={job} isMatch={false} />
-            ))}
-          </div>
-        </details>
-      )}
-    </>
+    </section>
   );
 }

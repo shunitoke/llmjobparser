@@ -1,14 +1,13 @@
 import { CandidateListResponse, SearchSession, SearchStatus } from './types';
 
+export type SourceHealth = 'ok' | 'slow' | 'blocked' | 'unknown';
+
 const API_BASE = (() => {
   if (typeof window === 'undefined') return '/api';
-  // Desktop app: PyWebview serves the SPA from the backend on the same random
-  // port. Use same-origin /api so requests reach the actual backend.
-  if (typeof (window as any).pywebview?.api !== 'undefined') return '/api';
-  // When served by the backend static handler (typically :8000), use same-origin.
-  if (window.location.port === '8000') return '/api';
   // Vite dev server (5173) — talk to the backend directly.
-  return 'http://127.0.0.1:8000/api';
+  if (window.location.port === '5173') return 'http://127.0.0.1:8000/api';
+  // Same-origin for the desktop app and the backend static handler.
+  return '/api';
 })();
 
 async function fetchJson<T>(
@@ -66,13 +65,17 @@ export async function getSessions(): Promise<SearchSession[]> {
   return fetchJson<SearchSession[]>(`${API_BASE}/sessions`, {}, 15000);
 }
 
+export async function getSourceHealth(): Promise<Record<string, SourceHealth>> {
+  return fetchJson<Record<string, SourceHealth>>(`${API_BASE}/sources/health`, {}, 15000);
+}
+
 export async function getCandidates(
   sessionId: number,
   offset: number = 0,
   limit: number = 50,
   selected: boolean | null = null,
   ready: boolean | null = null,
-  sort: 'date' | 'source' | 'location' | 'id' = 'id'
+  sort: 'created_at' | 'title' | 'source' = 'created_at'
 ): Promise<CandidateListResponse> {
   const params = new URLSearchParams();
   params.set('offset', String(offset));

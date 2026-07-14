@@ -1,6 +1,6 @@
-# Job Radar Desktop
+# vibejob Desktop
 
-Windows desktop build for Job Radar.
+Windows desktop build for vibejob.
 
 ## Build
 
@@ -8,7 +8,7 @@ Windows desktop build for Job Radar.
 .\desktop\build-desktop.ps1
 ```
 
-Output: `desktop/dist/JobRadar.exe`
+Output: `desktop/dist/vibejob.exe`
 
 ## Development
 
@@ -19,4 +19,4 @@ backend\.venv\Scripts\python.exe desktop\main.py
 
 ## Distribution
 
-Send `JobRadar.exe` to the user. On first run Windows may show a SmartScreen warning because the file is not code-signed.
+Send `vibejob.exe` to the user. On first run Windows may show a SmartScreen warning because the file is not code-signed.

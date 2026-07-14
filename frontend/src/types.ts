@@ -10,6 +10,7 @@ export interface Job {
   description: string | null;
   url: string;
   published_at?: string | null;
+  source?: string | null;
   is_match: boolean | null;
   match_reason: string | null;
 }

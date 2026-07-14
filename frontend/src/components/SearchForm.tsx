@@ -26,7 +26,7 @@ interface SearchFormProps {
 
 const MODE_ITEMS: Array<{ value: SearchMode; label: string; sources: string }> = [
   { value: 'ru', label: 'Россия', sources: 'hh.ru, rabota.ru, superjob.ru' },
-  { value: 'global', label: 'Весь мир', sources: 'RemoteOK, We Work Remotely, 4DayWeek, Djinni' },
+  { value: 'global', label: 'Мир', sources: 'RemoteOK, We Work Remotely, 4DayWeek, Djinni' },
   { value: 'telegram', label: 'Telegram', sources: 'каналы с вакансиями' },
 ];
 
@@ -58,7 +58,7 @@ export function SearchForm({
 
   return (
     <Card className="mb-8">
-      <CardContent className="pt-6 space-y-4">
+      <CardContent className="space-y-4 pt-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row">
             <div className="min-w-0 flex-1">

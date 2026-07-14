@@ -1,63 +1,74 @@
-# LLM Job Parser
+# vibejob
 
-AI-powered job search tool that analyzes hh.ru vacancies based on your natural language description.
+AI-powered job search tool that analyzes vacancies from multiple sources based on your natural language description.
 
 ## Features
 
 - **Natural language search**: Describe your ideal job in plain language
-- **AI-powered analysis**: Uses LLM to understand your requirements and match vacancies
-- **hh.ru scraping**: Automatically collects vacancies from hh.ru
-- **Smart matching**: Analyzes job descriptions for implicit requirements
+- **Multi-provider AI**: GigaChat, OpenAI, or OpenRouter — choose your LLM
+- **7 job sources**: hh.ru, Djinni, Rabota, 4dayweek, RemoteOK, WeWorkRemotely, Telegram channels
+- **Desktop app**: Windows native app built with PyInstaller + PyWebview
+- **Resume parsing**: Upload your CV for AI-driven job matching
+- **Telegram channel support**: Configure custom channels to scan for jobs
+- **DPAPI key storage**: API keys stored securely via Windows DPAPI
 
 ## Tech Stack
 
-- **Backend**: Python, FastAPI, SQLite, BeautifulSoup
-- **Frontend**: React, Vite, TailwindCSS, shadcn/ui
-- **AI**: GigaChat API (Sber)
+- **Backend**: Python, FastAPI, SQLAlchemy, SQLite, lxml
+- **Frontend**: React, Vite, TailwindCSS, shadcn/ui, TypeScript
+- **AI**: GigaChat (OAuth), OpenAI / OpenRouter (REST)
+- **Desktop**: PyInstaller, PyWebview, pywin32 (DPAPI)
 
-## Setup
+## Sources
 
-### 1. Backend
+| Source | Status | Method |
+|--------|--------|--------|
+| hh.ru | HTML fallback | requests + lxml |
+| Djinni.co | Working | CSS selectors |
+| Rabota.ru | Working | CSS selectors |
+| 4dayweek.io | Working | Public API |
+| RemoteOK | Working | Public API |
+| WeWorkRemotely | Working | RSS feed |
+| Telegram | Working | Channel parsing |
+| SuperJob | Offline | Blocked by captcha |
+
+## Quick Start
+
+### Desktop app (Windows)
 
 ```bash
+pip install -r backend/requirements.txt
+cd backend && python desktop/build.py
+desktop/dist/vibejob.exe
+```
+
+### Dev mode
+
+```bash
+# Backend
 cd backend
-python -m venv venv
-venv\Scripts\activate  # Windows
-# source venv/bin/activate  # Linux/Mac
+python -m venv .venv && .venv\Scripts\activate
 pip install -r requirements.txt
-```
+uvicorn app.main:app --reload --port 8000
 
-Create `.env` file in `backend` folder:
-```
-GIGACHAT_AUTH_KEY=your_gigachat_authorization_key_here
-```
-
-Run backend:
-```bash
-cd backend
-uvicorn app.main:app --reload
-```
-
-### 2. Frontend
-
-```bash
+# Frontend
 cd frontend
 npm install
 npm run dev
 ```
 
+Open http://localhost:5173, enter your API key on the first-run screen, and you're set.
+
 ## Usage
 
-1. Start backend on http://localhost:8000
-2. Start frontend on http://localhost:5173
-3. Enter your job description (e.g., "ненапряжная работа чтобы заниматься личными делами")
-4. Wait for AI to analyze vacancies
-5. Review matched jobs
+1. Enter a job description ("напряжная работа чтобы заниматься личными делами")
+2. LLM generates search queries and analyzes results
+3. Review matched jobs with AI-powered reasoning
+4. Optionally upload your resume for deeper matching
 
 ## How it works
 
-1. You enter a natural language description of your ideal job
-2. LLM generates search queries for hh.ru
-3. Scraper collects ~50 vacancies from hh.ru
-4. LLM analyzes each vacancy against your requirements
-5. Results are displayed with match explanations
+1. LLM generates search queries from your description
+2. Scrapers collect vacancies from all enabled sources
+3. LLM analyzes each vacancy against your requirements
+4. Results displayed with match score and explanation

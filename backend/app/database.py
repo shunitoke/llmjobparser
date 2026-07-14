@@ -15,7 +15,7 @@ def _get_app_data_dir() -> str:
     if getattr(sys, "frozen", False):
         # PyInstaller sets sys.frozen and sys._MEIPASS
         exe_dir = os.path.dirname(sys.executable)
-        data_dir = os.path.join(exe_dir, "job-radar-data")
+        data_dir = os.path.join(exe_dir, "vibejob-data")
         os.makedirs(data_dir, exist_ok=True)
         return data_dir
     return "."
