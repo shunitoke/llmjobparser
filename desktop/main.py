@@ -143,23 +143,28 @@ def main() -> None:
     window.expose(bridge.getKeyStatus, bridge.setKey, bridge.deleteKey, bridge.getStoredKey, bridge.openExternalLink)
     debug("window created, starting gui loop...")
 
-    def on_started():
-        debug("on_started: waiting for backend...")
-        ok = wait_for_backend(port)
-        debug(f"on_started: backend ready={ok}")
-        if ok:
-            url = f"http://127.0.0.1:{port}/?desktop=1"
-            debug(f"on_started: navigating to {url}")
-            window.load_url(url)
-            debug("on_started: load_url called")
-        else:
-            window.evaluate_js(
-                "document.getElementById('hint').textContent = 'Не удалось запустить сервер. Перезапустите приложение.'"
-            )
-            process.terminate()
+    def on_shown():
+        def wait_and_navigate():
+            debug("waiting for backend...")
+            ok = wait_for_backend(port)
+            debug(f"backend ready={ok}")
+            if ok:
+                url = f"http://127.0.0.1:{port}/?desktop=1"
+                debug(f"navigating to {url}")
+                window.load_url(url)
+                debug("load_url called")
+            else:
+                window.evaluate_js(
+                    "document.getElementById('hint').textContent = 'Не удалось запустить сервер. Перезапустите приложение.'"
+                )
+                process.terminate()
+        Thread(target=wait_and_navigate, daemon=True).start()
+
+    window.events.shown += on_shown
+    debug("window.shown handler registered")
 
     try:
-        webview.start(func=on_started, debug=False)
+        webview.start(debug=False)
     finally:
         debug("shutting down...")
         process.terminate()
