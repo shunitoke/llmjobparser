@@ -10,10 +10,6 @@ from threading import Thread
 # the same binary with VIBEJOB_BACKEND=1. This keeps the launcher and server
 # in one file while avoiding a separate backend.exe.
 if __name__ == "__main__" and os.environ.get("VIBEJOB_BACKEND") == "1":
-    # PyInstaller --windowed sets sys.stdout/stderr to None, which breaks
-    # uvicorn's logging formatter (it calls .isatty()). Prefer the inherited
-    # pipe handles (set by the launcher via subprocess.PIPE) so logs still
-    # reach the launcher's log stream; fall back to devnull if unavailable.
     for _fd, _attr in ((1, "stdout"), (2, "stderr")):
         if getattr(sys, _attr, None) is None:
             try:
@@ -31,16 +27,14 @@ if __name__ == "__main__" and os.environ.get("VIBEJOB_BACKEND") == "1":
     )
     sys.exit(0)
 
-# Allow the launcher to be run directly as ``python desktop/main.py`` without
-# requiring PYTHONPATH to contain the project root.
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-import httpx
 import webview
 
 from desktop.api_bridge import ApiBridge
+from desktop.loading import LOADING_HTML
 
 
 def get_free_port() -> int:
@@ -124,22 +118,16 @@ def main() -> None:
     app_data_dir.mkdir(parents=True, exist_ok=True)
 
     bridge = ApiBridge(app_data_dir=app_data_dir)
-    # The GigaChat key is no longer seeded into the process environment. The
-    # desktop UI POSTs it to /api/settings/gigachat-key where it becomes the
-    # key_manager runtime override; see frontend/src/lib/desktop.ts.
     port = get_free_port()
     process = start_backend(port, app_data_dir)
 
     log_thread = Thread(target=stream_logs, args=(process,), daemon=True)
     log_thread.start()
 
-    if not wait_for_backend(port):
-        process.terminate()
-        raise RuntimeError("Backend failed to start")
-
+    loading_html = LOADING_HTML.replace("PORT_PLACEHOLDER", str(port))
     window = webview.create_window(
         "vibejob",
-        f"http://127.0.0.1:{port}/?desktop=1",
+        html=loading_html,
         width=1280,
         height=800,
         min_size=(900, 600),

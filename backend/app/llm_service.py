@@ -61,7 +61,7 @@ class LLMService:
         if provider == "anthropic":
             return self.settings.anthropic_model or "claude-3-5-haiku-20241022"
         if provider == "deepseek":
-            return self.settings.deepseek_model or "deepseek-chat"
+            return self.settings.deepseek_model or "deepseek-v4-flash"
         if provider == "gemini":
             return self.settings.gemini_model or "gemini-2.0-flash"
         return self.settings.gigachat_model or "GigaChat"

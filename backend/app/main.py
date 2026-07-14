@@ -112,7 +112,7 @@ async def set_llm_config_api(payload: LlmConfigPayload):
 CHEAP_MODEL_IDS = {
     "gigachat": ["GigaChat"],
     "anthropic": ["claude-3-haiku", "claude-3-5-haiku", "claude-sonnet-4"],
-    "deepseek": ["deepseek-chat", "deepseek-reasoner"],
+    "deepseek": ["deepseek-v4-flash", "deepseek-v4-pro"],
     "gemini": ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"],
 }
 
@@ -182,7 +182,7 @@ async def get_llm_models(payload: LlmModelsPayload):
                 r.raise_for_status()
                 data = r.json()
                 all_ids = [m["id"] for m in data.get("data", [])]
-                preferred = ["deepseek-chat", "deepseek-reasoner"]
+                preferred = ["deepseek-v4-flash", "deepseek-v4-pro"]
                 found = [m for m in preferred if m in all_ids] or all_ids[:3]
                 suggested = found
         except Exception:
