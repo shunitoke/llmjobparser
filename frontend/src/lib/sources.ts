@@ -40,7 +40,7 @@ const SOURCE_BY_NAME: Record<string, SourceInfo> = {
 
 const FALLBACK: SourceInfo = { name: 'Источник', badgeClass: 'bg-muted text-muted-foreground border-input' };
 
-export function getSourceInfo(item: Job | CandidateJob): SourceInfo {
+function getSourceInfo(item: Job | CandidateJob): SourceInfo {
   const hhId = (item.hh_id || '').toLowerCase();
   for (const prefix of Object.keys(SOURCE_BY_ID)) {
     if (hhId.startsWith(prefix)) return SOURCE_BY_ID[prefix];

@@ -5,19 +5,22 @@ AI-powered job search tool that analyzes vacancies from multiple sources based o
 ## Features
 
 - **Natural language search**: Describe your ideal job in plain language
-- **Multi-provider AI**: GigaChat, OpenAI, or OpenRouter — choose your LLM
-- **7 job sources**: hh.ru, Djinni, Rabota, 4dayweek, RemoteOK, WeWorkRemotely, Telegram channels
-- **Desktop app**: Windows native app built with PyInstaller + PyWebview
-- **Resume parsing**: Upload your CV for AI-driven job matching
+- **Multi-provider AI**: GigaChat, OpenAI, OpenRouter, Anthropic Claude, DeepSeek, Google Gemini
+- **Model auto-detection**: Fetches available models and picks the cheapest capable one
+- **8 job sources**: hh.ru, Djinni, Rabota.ru, SuperJob, 4dayweek.io, RemoteOK, WeWorkRemotely, Telegram channels
+- **Desktop app**: Windows native app — loads instantly with spinner, backend starts in background
+- **Resume parsing**: Upload a file (PDF/DOC/DOCX/TXT) or paste text directly
+- **AI-driven matching**: LLM generates search queries, selects best vacancies, and analyzes each one
 - **Telegram channel support**: Configure custom channels to scan for jobs
 - **DPAPI key storage**: API keys stored securely via Windows DPAPI
+- **Theme**: Dynamic dark/light — follows OS or manual toggle, persisted in localStorage
 
 ## Tech Stack
 
-- **Backend**: Python, FastAPI, SQLAlchemy, SQLite, lxml
-- **Frontend**: React, Vite, TailwindCSS, shadcn/ui, TypeScript
-- **AI**: GigaChat (OAuth), OpenAI / OpenRouter (REST)
-- **Desktop**: PyInstaller, PyWebview, pywin32 (DPAPI)
+- **Backend**: Python, FastAPI, SQLAlchemy, SQLite, lxml, httpx
+- **Frontend**: React 18, Vite, TailwindCSS, shadcn/ui, TypeScript
+- **AI**: GigaChat (OAuth), OpenAI, Anthropic Claude, DeepSeek, Google Gemini, OpenRouter
+- **Desktop**: PyInstaller (single-file EXE), PyWebview, pywin32 (DPAPI)
 
 ## Sources
 
@@ -30,7 +33,7 @@ AI-powered job search tool that analyzes vacancies from multiple sources based o
 | RemoteOK | Working | Public API |
 | WeWorkRemotely | Working | RSS feed |
 | Telegram | Working | Channel parsing |
-| SuperJob | Offline | Blocked by captcha |
+| SuperJob | Blocked by captcha | — |
 
 ## Quick Start
 
@@ -61,14 +64,17 @@ Open http://localhost:5173, enter your API key on the first-run screen, and you'
 
 ## Usage
 
-1. Enter a job description ("напряжная работа чтобы заниматься личными делами")
-2. LLM generates search queries and analyzes results
+1. Enter a job description ("удалённая работа с гибким графиком")
+2. LLM generates search queries and analyzes results from all sources
 3. Review matched jobs with AI-powered reasoning
-4. Optionally upload your resume for deeper matching
+4. Optionally upload your resume or paste its text for deeper matching
+5. View parsed resume data (position, skills, experience) at any time
 
 ## How it works
 
 1. LLM generates search queries from your description
 2. Scrapers collect vacancies from all enabled sources
-3. LLM analyzes each vacancy against your requirements
-4. Results displayed with match score and explanation
+3. LLM selects the most promising candidates from the raw list
+4. Selected vacancies are scraped for full details (description, experience, etc.)
+5. LLM analyzes each vacancy against your requirements
+6. Results displayed with match status and explanation

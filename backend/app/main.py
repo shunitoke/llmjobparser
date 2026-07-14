@@ -109,7 +109,7 @@ async def set_llm_config_api(payload: LlmConfigPayload):
     return {"status": "ok"}
 
 
-CHEAP_MODEL_IDS = {
+FALLBACK_MODELS = {
     "gigachat": ["GigaChat"],
     "anthropic": ["claude-3-haiku", "claude-3-5-haiku", "claude-sonnet-4"],
     "deepseek": ["deepseek-v4-flash", "deepseek-v4-pro"],
@@ -226,12 +226,11 @@ async def get_llm_models(payload: LlmModelsPayload):
                 elif r.status_code == 404:
                     suggested = ["claude-sonnet-4-20250514", "claude-3-5-haiku-20241022"]
                 else:
-                    suggested = list(CHEAP_MODEL_IDS.get("anthropic", []))
+                    suggested = list(FALLBACK_MODELS.get("anthropic", []))
         except Exception:
-            suggested = list(CHEAP_MODEL_IDS.get("anthropic", []))
-
+            suggested = list(FALLBACK_MODELS.get("anthropic", []))
     if not suggested:
-        suggested = list(CHEAP_MODEL_IDS.get(provider, []))
+        suggested = list(FALLBACK_MODELS.get(provider, []))
 
     return {"provider": provider, "models": suggested, "default": suggested[0] if suggested else ""}
 
@@ -258,6 +257,25 @@ async def update_telegram_channels(payload: TelegramChannelsPayload):
         cleaned.append({"name": name, "category": category})
     await set_telegram_channels(cleaned)
     return {"status": "ok", "channels": cleaned}
+
+
+class ResumeTextPayload(BaseModel):
+    text: str
+
+
+@app.post("/api/resume/parse-text")
+async def parse_resume_text(payload: ResumeTextPayload):
+    if not payload.text.strip():
+        raise HTTPException(status_code=400, detail="Text cannot be empty")
+    parser = ResumeParser()
+    try:
+        result = await parser.parse_text(payload.text)
+        return result
+    except Exception as e:
+        logger.exception("Resume text parsing failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"Resume parsing failed: {e}")
+    finally:
+        await parser.close()
 
 
 @app.post("/api/resume/parse")

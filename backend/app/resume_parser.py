@@ -50,6 +50,15 @@ class ResumeParser:
                 "Switch to GigaChat or upload a .txt file."
             )
 
+        return self._format_result(result)
+
+    async def parse_text(self, text: str) -> Dict[str, Any]:
+        if not text.strip():
+            raise ValueError("Text cannot be empty")
+        result = await self._llm.parse_resume(text, from_text=True)
+        return self._format_result(result)
+
+    def _format_result(self, result: Any) -> Dict[str, Any]:
         return {
             "position": result.get("position", "") if isinstance(result, dict) else "",
             "skills": result.get("skills", []) if isinstance(result, dict) else [],

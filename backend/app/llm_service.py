@@ -35,10 +35,12 @@ class LLMService:
             pool=10.0,
         )
         limits = httpx.Limits(max_connections=20, max_keepalive_connections=10)
-        self._client = httpx.AsyncClient(timeout=timeout, limits=limits, verify=False)
+        self._client = httpx.AsyncClient(timeout=timeout, limits=limits)
+        self._gigachat_client = httpx.AsyncClient(timeout=timeout, limits=limits, verify=False)
 
     async def aclose(self) -> None:
         await self._client.aclose()
+        await self._gigachat_client.aclose()
 
     # ── Provider helpers ──
 
@@ -76,7 +78,7 @@ class LLMService:
             raise RuntimeError("Authorization key is not configured")
         headers = {"Authorization": f"Bearer {await self._get_access_token()}"}
         files = {"file": (filename, content, content_type), "purpose": (None, "general")}
-        resp = await self._client.post(
+        resp = await self._gigachat_client.post(
             "https://gigachat.devices.sberbank.ru/api/v1/files",
             headers=headers,
             files=files,
@@ -143,7 +145,7 @@ class LLMService:
             "Authorization": f"Bearer {key}",
         }
         data = {"scope": self.settings.gigachat_scope}
-        resp = await self._client.post(self.GIGACHAT_OAUTH_URL, headers=headers, data=data)
+        resp = await self._gigachat_client.post(self.GIGACHAT_OAUTH_URL, headers=headers, data=data)
         resp.raise_for_status()
         body = resp.json()
         self._access_token = body["access_token"]
@@ -195,7 +197,7 @@ class LLMService:
             while True:
                 try:
                     headers = await self._headers()
-                    response = await self._client.post(
+                    response = await self._gigachat_client.post(
                         self.GIGACHAT_CHAT_URL,
                         headers=headers,
                         json={

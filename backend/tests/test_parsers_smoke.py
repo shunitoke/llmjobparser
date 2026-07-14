@@ -33,7 +33,6 @@ class TestParsersSmoke(unittest.IsolatedAsyncioTestCase):
                 self.skipTest(
                     f"Network/source unavailable for {scraper_cls.__name__}: {exc}"
                 )
-                return
             self.assertIsInstance(results, list)
             if results:
                 for item in results[:max_results]:

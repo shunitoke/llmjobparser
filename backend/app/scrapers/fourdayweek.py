@@ -30,6 +30,7 @@ class FourDayWeekScraper(BaseScraper):
                 items = body.get("jobs", [])
                 if not items:
                     break
+                query_tokens = [t.lower() for t in query.split() if t]
                 for item in items:
                     if len(vacancies) >= max_results:
                         break
@@ -39,6 +40,8 @@ class FourDayWeekScraper(BaseScraper):
                             [v.get("title", ""), v.get("description", ""), v.get("location", "")]
                         )
                         if is_blocked_for_global(full_text):
+                            continue
+                        if query_tokens and not any(t in full_text.lower() for t in query_tokens):
                             continue
                         vacancies.append(v)
                 if not body.get("has_more"):
@@ -59,6 +62,7 @@ class FourDayWeekScraper(BaseScraper):
             url = f"https://4dayweek.io/job/{slug}" if slug else ""
             source_id = slug or str(item.get("id", ""))
             company = item.get("company_name", "") or ""
+            description = item.get("description") or ""
             locs = item.get("locations") or []
             loc_parts = []
             for l in locs:
@@ -66,13 +70,13 @@ class FourDayWeekScraper(BaseScraper):
                 if part:
                     loc_parts.append(part)
             location = ", ".join(loc_parts)
-            published_at = ""
+            published_at = None
             ts = item.get("posted")
             if ts:
                 try:
-                    published_at = datetime.fromtimestamp(int(ts)).isoformat()
+                    published_at = datetime.fromtimestamp(int(ts))
                 except Exception:
-                    published_at = str(ts)
+                    published_at = None
             return self._vacancy_stub(
                 source_id=source_id,
                 title=title,
@@ -81,14 +85,11 @@ class FourDayWeekScraper(BaseScraper):
                 salary="",
                 location=location,
                 published_at=published_at,
+                description=description,
             )
         except Exception as exc:
             logger.warning("[4dayweek] parse item error: %s", exc)
             return None
-
-    def _extract_id(self, url: str) -> str:
-        match = re.search(r"/remote-jobs/(.+)$", url)
-        return match.group(1) if match else re.sub(r"\W", "", url)[:30]
 
     async def get_vacancy_details(self, url: str) -> Optional[Dict]:
         try:

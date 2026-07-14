@@ -28,7 +28,7 @@ export function formatRelativeDate(iso?: string | null): string {
   if (diffDays === 0) return 'сегодня';
   if (diffDays === 1) return 'вчера';
   if (diffDays >= 2 && diffDays < 5) return `${diffDays} дня назад`;
-  if (diffDays >= 5 && diffDays <= 21) return `${diffDays} дней назад`;
+  if (diffDays >= 5 && diffDays < 21) return `${diffDays} дней назад`;
   if (diffDays > 21) {
     const rem = diffDays % 10;
     if (rem === 1 && diffDays % 100 !== 11) return `${diffDays} день назад`;

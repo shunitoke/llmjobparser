@@ -51,7 +51,7 @@ export function FirstRunKeyPrompt({ isDark, onToggleTheme, onSaved }: {
               <div>
                 <h1 className="text-2xl font-semibold tracking-tight">Настройте API</h1>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  vibejob использует нейросеть для анализа вакансий. Вы можете использовать GigaChat (бесплатно), OpenAI или OpenRouter.
+                  vibejob использует нейросеть для анализа вакансий. Вы можете использовать GigaChat (бесплатно), OpenAI, OpenRouter, Anthropic Claude, DeepSeek или Google Gemini.
                   Ключ хранится только на этом компьютере.
                 </p>
               </div>

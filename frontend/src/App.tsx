@@ -56,14 +56,16 @@ function App() {
       document.documentElement.classList.toggle('dark', dark);
       setIsDark(dark);
     };
+    const handler = (e: MediaQueryListEvent) => {
+      if (!localStorage.getItem('theme')) apply(e.matches);
+    };
     if (saved) {
       apply(saved === 'dark');
     } else {
       apply(mq?.matches ?? false);
-      const handler = (e: MediaQueryListEvent) => apply(e.matches);
-      mq?.addEventListener('change', handler);
-      return () => mq?.removeEventListener('change', handler);
     }
+    mq?.addEventListener('change', handler);
+    return () => mq?.removeEventListener('change', handler);
   }, []);
 
   useEffect(() => {
