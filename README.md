@@ -1,12 +1,8 @@
-<p align="center">
-  <img src="frontend/public/logo.webp" alt="vibejob" width="48" />
-</p>
-
 <h1 align="center">vibejob</h1>
 
 <p align="center">
-  AI-powered job search — describe your dream job in plain language, get matched from 8 sources.<br/>
-  <a href="https://github.com/shunitoke/llmjobparser/releases/latest">Download for Windows</a>
+  AI-поиск работы — опиши мечту на человеческом языке, получи десятки вариантов из разных источников по всему миру.<br/>
+  <a href="https://github.com/shunitoke/llmjobparser/releases/latest">Скачать для Windows</a>
 </p>
 
 <p align="center">
@@ -15,85 +11,83 @@
 
 ---
 
-## Features
+## Что это
 
-- **Natural language search** — describe your ideal job however you want
-- **8 job sources** — hh.ru, Rabota.ru, SuperJob, RemoteOK, WeWorkRemotely, 4dayweek.io, Djinni, Telegram channels
-- **AI-driven matching** — LLM generates queries, selects best vacancies, and analyzes each one
-- **Multi-provider AI** — GigaChat, OpenAI, OpenRouter, Anthropic Claude, DeepSeek, Google Gemini
-- **Model auto-detection** — picks the cheapest capable model from your provider
-- **Resume parsing** — upload PDF/DOC/DOCX/TXT or paste text for deeper matching
-- **Desktop app** — single-file Windows EXE, no install required
-- **Telegram channels** — configure custom channels to scan for jobs
-- **Dark/light theme** — follows OS or manual toggle
+**vibejob** — это desktop-приложение, которое ищет работу за тебя. Пишешь «хочу удалёнку на фронте от 200к без созвонов» — и получаешь отфильтрованный список вакансий с объяснением от нейросети, почему каждая подходит.
 
-## Download
+Никаких форм. Никаких фильтров с дропдаунами. Просто опиши что хочешь.
 
-**Windows** — download the latest release:
+## Возможности
 
-[**vibejob.exe** (27 MB)](https://github.com/shunitoke/llmjobparser/releases/latest)
+- **Поиск на естественном языке** — пиши как хочется, нейросеть поймёт
+- **Десятки источников** — hh.ru, Telegram каналы, RemoteOK, WeWorkRemotely, Djinni и другие
+- **AI-анализ** — нейросеть выбирает лучшие вакансии и объясняет почему
+- **Резюме** — загрузи файл или вставь текст, подбор станет точнее
+- **Несколько AI-провайдеров** — GigaChat (бесплатно), OpenAI, Claude, DeepSeek, Gemini, OpenRouter
+- **Автовыбор модели** — находит самую дешёвую рабочую модель у провайдера
+- **Telegram-каналы** — добавь свои каналы с вакансиями
+- **Тёмная тема** — переключение по кнопке или по системе
 
-No installation needed. Run it and enter your API key on first launch.
+## Скачать
 
-## Quick Start
+**Windows** — скачай свежий релиз:
 
-### Dev mode
+[**vibejob.exe** (27 МБ)](https://github.com/shunitoke/llmjobparser/releases/latest)
+
+Установка не нужна. Запусти, введи API-ключ — и поехали.
+
+## Как запустить
 
 ```bash
-# Backend
+# Бэкенд
 cd backend
 python -m venv .venv && .venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 
-# Frontend
+# Фронтенд
 cd frontend
 npm install
 npm run dev
 ```
 
-Open http://localhost:5173, enter your API key, and you're set.
+Открой http://localhost:5173, введи ключ — всё работает.
 
-### Build desktop app
+## Как это работает
 
-```bash
-cd frontend && npm run build
-cd ../desktop && pyinstaller vibejob.spec --noconfirm --clean
-```
+1. Ты описываешь работу мечты
+2. Нейросеть генерирует поисковые запросы
+3. Парсеры собирают вакансии из всех источников
+4. Нейросеть отбирает лучшие кандидаты
+5. Отобранные вакансии скачиваются полностью
+6. Нейросеть анализирует каждую под твои требования
+7. Ты видишь результат с объяснениями
 
-Output: `desktop/dist/vibejob.exe`
+## Источники
 
-## How it works
+| Источник | Статус | Метод |
+|----------|--------|-------|
+| hh.ru | Работает | HTML fallback |
+| Djinni.co | Работает | CSS селекторы |
+| Rabota.ru | Работает | CSS селекторы |
+| 4dayweek.io | Работает | Публичное API |
+| RemoteOK | Работает | Публичное API |
+| WeWorkRemotely | Работает | RSS |
+| Telegram | Работает | Парсинг каналов |
+| SuperJob | Капча | — |
 
-1. You describe the job you want in natural language
-2. LLM generates targeted search queries
-3. Scrapers collect vacancies from all enabled sources
-4. LLM selects the most promising candidates
-5. Selected vacancies are scraped for full details
-6. LLM analyzes each vacancy against your requirements
-7. You see matched jobs with explanations
+## Стек
 
-## Sources
+**Бэкенд** — Python, FastAPI, SQLAlchemy, SQLite, lxml, httpx
 
-| Source | Status | Method |
-|--------|--------|--------|
-| hh.ru | Working | HTML fallback |
-| Djinni.co | Working | CSS selectors |
-| Rabota.ru | Working | CSS selectors |
-| 4dayweek.io | Working | Public API |
-| RemoteOK | Working | Public API |
-| WeWorkRemotely | Working | RSS feed |
-| Telegram | Working | Channel parsing |
-| SuperJob | Blocked by captcha | — |
+**Фронтенд** — React 18, Vite, TailwindCSS, shadcn/ui, TypeScript
 
-## Tech Stack
+**Desktop** — PyInstaller (один EXE), PyWebview, pywin32 (DPAPI)
 
-**Backend** — Python, FastAPI, SQLAlchemy, SQLite, lxml, httpx
+## Поддержка
 
-**Frontend** — React 18, Vite, TailwindCSS, shadcn/ui, TypeScript
+Если проект полезен — можно угостить кофе: [Donat](https://web.tribute.tg/p/A0B)
 
-**Desktop** — PyInstaller (single-file EXE), PyWebview, pywin32 (DPAPI)
-
-## License
+## Лицензия
 
 MIT
