@@ -6,6 +6,8 @@ import time
 from pathlib import Path
 from threading import Thread
 
+import httpx
+
 # When packaged as a single executable, the backend is started by re-executing
 # the same binary with VIBEJOB_BACKEND=1. This keeps the launcher and server
 # in one file while avoiding a separate backend.exe.
@@ -90,6 +92,16 @@ def start_backend(port: int, app_data_dir: Path) -> subprocess.Popen:
     )
 
 
+def stream_logs(process: subprocess.Popen) -> None:
+    try:
+        for line in iter(process.stdout.readline, ""):
+            if not line:
+                break
+            print(line, end="")
+    except Exception:
+        pass
+
+
 def wait_for_backend(port: int, timeout: float = 30.0) -> bool:
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -103,16 +115,6 @@ def wait_for_backend(port: int, timeout: float = 30.0) -> bool:
     return False
 
 
-def stream_logs(process: subprocess.Popen) -> None:
-    try:
-        for line in iter(process.stdout.readline, ""):
-            if not line:
-                break
-            print(line, end="")
-    except Exception:
-        pass
-
-
 def main() -> None:
     app_data_dir = get_app_data_dir()
     app_data_dir.mkdir(parents=True, exist_ok=True)
@@ -124,15 +126,22 @@ def main() -> None:
     log_thread = Thread(target=stream_logs, args=(process,), daemon=True)
     log_thread.start()
 
-    loading_html = LOADING_HTML.replace("PORT_PLACEHOLDER", str(port))
     window = webview.create_window(
         "vibejob",
-        html=loading_html,
+        html=LOADING_HTML,
         width=1280,
         height=800,
         min_size=(900, 600),
     )
     window.expose(bridge.getKeyStatus, bridge.setKey, bridge.deleteKey, bridge.getStoredKey, bridge.openExternalLink)
+
+    def navigate_when_ready():
+        if wait_for_backend(port):
+            window.load_url(f"http://127.0.0.1:{port}/?desktop=1")
+        else:
+            process.terminate()
+
+    Thread(target=navigate_when_ready, daemon=True).start()
 
     try:
         webview.start(debug=False)

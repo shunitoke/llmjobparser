@@ -23,7 +23,7 @@ LOADING_HTML = r"""<!DOCTYPE html>
     border-radius: 50%; animation: spin 0.8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .hint { color: #94a3b8; font-size: 0.875rem; line-height: 1.5; min-height: 3em; transition: opacity 0.3s; }
+  .hint { color: #94a3b8; font-size: 0.875rem; line-height: 1.5; min-height: 3em; }
 </style>
 </head>
 <body>
@@ -55,15 +55,6 @@ let i = 0;
 const el = document.getElementById('hint');
 el.textContent = HINTS[0];
 setInterval(() => { i = (i + 1) % HINTS.length; el.textContent = HINTS[i]; }, 4000);
-(async function poll() {
-  for (;;) {
-    try {
-      const r = await fetch('http://127.0.0.1:PORT_PLACEHOLDER/api/health');
-      if (r.ok) { window.location.href = 'http://127.0.0.1:PORT_PLACEHOLDER/?desktop=1'; return; }
-    } catch {}
-    await new Promise(r => setTimeout(r, 300));
-  }
-})();
 </script>
 </body>
 </html>"""
