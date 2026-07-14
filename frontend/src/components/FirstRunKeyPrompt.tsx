@@ -106,6 +106,29 @@ export function FirstRunKeyPrompt({ isDark, onToggleTheme, onSaved }: {
                       <ExternalLink className="h-3 w-3" />
                     </button>
                   </p>
+                  <p>
+                    <strong>DeepSeek</strong> —{' '}
+                    <button
+                      type="button"
+                      onClick={() => openExternal('https://platform.deepseek.com/api_keys')}
+                      className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                    >
+                      получить API-ключ
+                      <ExternalLink className="h-3 w-3" />
+                    </button>
+                  </p>
+                  <p>
+                    <strong>Google Gemini</strong> —{' '}
+                    <button
+                      type="button"
+                      onClick={() => openExternal('https://aistudio.google.com/apikey')}
+                      className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                    >
+                      получить API-ключ
+                      <ExternalLink className="h-3 w-3" />
+                    </button>
+                    (бесплатный тариф)
+                  </p>
                 </div>
               </details>
             </>

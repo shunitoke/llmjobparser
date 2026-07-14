@@ -112,6 +112,8 @@ async def set_llm_config_api(payload: LlmConfigPayload):
 CHEAP_MODEL_IDS = {
     "gigachat": ["GigaChat"],
     "anthropic": ["claude-3-haiku", "claude-3-5-haiku", "claude-sonnet-4"],
+    "deepseek": ["deepseek-chat", "deepseek-reasoner"],
+    "gemini": ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"],
 }
 
 
@@ -167,6 +169,39 @@ async def get_llm_models(payload: LlmModelsPayload):
                     priced.append((cost, m["id"]))
                 priced.sort(key=lambda x: x[0])
                 suggested = [m_id for _, m_id in priced[:8]]
+        except Exception:
+            pass
+
+    elif provider == "deepseek" and key:
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                r = await client.get(
+                    "https://api.deepseek.com/v1/models",
+                    headers={"Authorization": f"Bearer {key}"},
+                )
+                r.raise_for_status()
+                data = r.json()
+                all_ids = [m["id"] for m in data.get("data", [])]
+                preferred = ["deepseek-chat", "deepseek-reasoner"]
+                found = [m for m in preferred if m in all_ids] or all_ids[:3]
+                suggested = found
+        except Exception:
+            pass
+
+    elif provider == "gemini" and key:
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                r = await client.get(
+                    "https://generativelanguage.googleapis.com/v1beta/models",
+                    params={"key": key},
+                )
+                r.raise_for_status()
+                data = r.json()
+                all_ids = [m["name"].split("/")[-1] for m in data.get("models", [])
+                           if "generateContent" in m.get("supportedGenerationMethods", [])]
+                flash = [m for m in all_ids if "flash" in m]
+                flash.sort()
+                suggested = (flash + all_ids)[:5]
         except Exception:
             pass
 

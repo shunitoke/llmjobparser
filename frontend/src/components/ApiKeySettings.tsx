@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getDesktopApi, waitForDesktopApi } from '@/lib/desktop';
 
-type Provider = 'gigachat' | 'openai' | 'openrouter' | 'anthropic';
+type Provider = 'gigachat' | 'openai' | 'openrouter' | 'anthropic' | 'deepseek' | 'gemini';
 
 type LlmConfig = {
   provider: Provider;
@@ -23,6 +23,8 @@ const FALLBACK_MODELS: Record<Provider, string> = {
   openai: 'gpt-4o-mini',
   openrouter: 'openai/gpt-4o-mini',
   anthropic: 'claude-3-5-haiku-20241022',
+  deepseek: 'deepseek-chat',
+  gemini: 'gemini-2.0-flash',
 };
 
 const PROVIDER_LABELS: Record<Provider, string> = {
@@ -30,13 +32,17 @@ const PROVIDER_LABELS: Record<Provider, string> = {
   openai: 'OpenAI',
   openrouter: 'OpenRouter',
   anthropic: 'Anthropic Claude',
+  deepseek: 'DeepSeek',
+  gemini: 'Google Gemini',
 };
 
 const PROVIDER_DESCRIPTIONS: Record<Provider, string> = {
   gigachat: 'Бесплатный ключ от Сбера. Требуется регистрация в SberStudio.',
   openai: 'API-ключ от OpenAI.',
-  openrouter: 'Универсальный API-ключ: Claude, DeepSeek, Gemini и 300+ моделей.',
+  openrouter: 'Универсальный шлюз: Claude, Gemini, DeepSeek и 300+ моделей.',
   anthropic: 'API-ключ от Anthropic. Claude — мощная модель для анализа текста.',
+  deepseek: 'Китайская LLM с очень низкими ценами. OpenAI-совместимый API.',
+  gemini: 'Google Gemini — дешёвая и быстрая модель с бесплатным тарифом.',
 };
 
 const PROVIDER_KEY_LABELS: Record<Provider, string> = {
@@ -44,6 +50,8 @@ const PROVIDER_KEY_LABELS: Record<Provider, string> = {
   openai: 'API-ключ OpenAI (sk-...)',
   openrouter: 'API-ключ OpenRouter',
   anthropic: 'API-ключ Anthropic (sk-ant-...)',
+  deepseek: 'API-ключ DeepSeek',
+  gemini: 'API-ключ Google AI Studio',
 };
 
 const PROVIDER_KEY_PLACEHOLDERS: Record<Provider, string> = {
@@ -51,6 +59,8 @@ const PROVIDER_KEY_PLACEHOLDERS: Record<Provider, string> = {
   openai: 'sk-...',
   openrouter: 'Вставьте API-ключ OpenRouter',
   anthropic: 'sk-ant-...',
+  deepseek: 'sk-...',
+  gemini: 'AIza...',
 };
 
 export function ApiKeySettings({ onSaved, onDeleted }: ApiKeySettingsProps) {
@@ -213,6 +223,7 @@ export function ApiKeySettings({ onSaved, onDeleted }: ApiKeySettingsProps) {
   const handleProviderChange = async (v: Provider) => {
     setProvider(v);
     setModel('');
+    setAvailableModels([]);
     setShowModelField(false);
     await detectModels(v, key);
   };

@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     openrouter_model: str = "openai/gpt-4o-mini"
     anthropic_model: str = "claude-3-5-haiku-20241022"
+    deepseek_model: str = "deepseek-chat"
+    gemini_model: str = "gemini-2.0-flash"
     candidates_cap: int = Field(default=500, ge=1, le=2_000)
     selected_cap: int = Field(default=100, ge=1, le=500)
     telegram_channels: str = (

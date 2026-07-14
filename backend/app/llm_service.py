@@ -21,6 +21,8 @@ class LLMService:
     OPENAI_BASE_URL = "https://api.openai.com/v1"
     OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
     ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1"
+    DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
+    GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 
     def __init__(self):
         self.settings = get_settings()
@@ -58,6 +60,10 @@ class LLMService:
             return self.settings.openrouter_model or "openai/gpt-4o-mini"
         if provider == "anthropic":
             return self.settings.anthropic_model or "claude-3-5-haiku-20241022"
+        if provider == "deepseek":
+            return self.settings.deepseek_model or "deepseek-chat"
+        if provider == "gemini":
+            return self.settings.gemini_model or "gemini-2.0-flash"
         return self.settings.gigachat_model or "GigaChat"
 
     # ── Resume file upload (GigaChat only) ──
@@ -175,6 +181,10 @@ class LLMService:
             return await self._call_openai(messages, temperature, base_url=self.OPENROUTER_BASE_URL)
         elif provider == "anthropic":
             return await self._call_anthropic(messages, temperature)
+        elif provider == "deepseek":
+            return await self._call_openai(messages, temperature, base_url=self.DEEPSEEK_BASE_URL)
+        elif provider == "gemini":
+            return await self._call_gemini(messages, temperature)
         else:
             raise RuntimeError(f"Unknown LLM provider: {provider}")
 
@@ -315,6 +325,55 @@ class LLMService:
                         raise
                     data = response.json()
                     return data["content"][0]["text"]
+                except (httpx.TimeoutException, httpx.ConnectError, httpx.ReadError):
+                    if attempt < max_retries:
+                        wait_s = min(20.0, 2.0 ** attempt)
+                        attempt += 1
+                        await asyncio.sleep(wait_s)
+                        continue
+                    raise
+
+    async def _call_gemini(self, messages: List[Dict], temperature: float) -> str:
+        key = self._get_api_key()
+        if not key:
+            raise RuntimeError("API key is not configured")
+
+        system = None
+        contents = []
+        for m in messages:
+            if m.get("role") == "system":
+                system = m["content"]
+            else:
+                contents.append({"role": m["role"], "parts": [{"text": m["content"]}]})
+
+        body: Dict[str, Any] = {
+            "contents": contents,
+            "generationConfig": {"temperature": temperature},
+        }
+        if system:
+            body["systemInstruction"] = {"parts": [{"text": system}]}
+
+        url = f"{self.GEMINI_BASE_URL}/models/{self._get_model()}:generateContent?key={key}"
+        max_retries = max(0, int(self.settings.gigachat_max_retries or 0))
+        attempt = 0
+        async with self._semaphore:
+            while True:
+                try:
+                    response = await self._client.post(url, json=body)
+                    try:
+                        response.raise_for_status()
+                    except httpx.HTTPStatusError as e:
+                        status = e.response.status_code
+                        if status in (429, 502, 503, 504) and attempt < max_retries:
+                            retry_after = self._extract_retry_after(e.response)
+                            if retry_after <= 0:
+                                retry_after = min(20.0, 2.0 ** attempt)
+                            attempt += 1
+                            await asyncio.sleep(retry_after)
+                            continue
+                        raise
+                    data = response.json()
+                    return data["candidates"][0]["content"]["parts"][0]["text"]
                 except (httpx.TimeoutException, httpx.ConnectError, httpx.ReadError):
                     if attempt < max_retries:
                         wait_s = min(20.0, 2.0 ** attempt)
