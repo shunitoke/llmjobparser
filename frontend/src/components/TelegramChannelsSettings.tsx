@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 
 interface Channel {
   name: string;
-  category: string;
 }
 
 export function TelegramChannelsSettings() {
@@ -14,7 +13,6 @@ export function TelegramChannelsSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newCategory, setNewCategory] = useState('vacancy');
   const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
@@ -59,13 +57,12 @@ export function TelegramChannelsSettings() {
       setError('Введите имя канала');
       return;
     }
-    const category = newCategory.trim() || 'vacancy';
     if (channels.some((c) => c.name === name)) {
       setError('Канал уже есть в списке');
       return;
     }
     setError(null);
-    const next = [...channels, { name, category }];
+    const next = [...channels, { name }];
     setNewName('');
     save(next);
   };
@@ -78,7 +75,7 @@ export function TelegramChannelsSettings() {
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">
-        Добавьте каналы Telegram в формате @channel. Категория используется для фильтрации вакансий.
+        Добавьте каналы Telegram в формате @channel.
       </p>
 
       {loading ? (
@@ -94,10 +91,7 @@ export function TelegramChannelsSettings() {
                 key={c.name}
                 className="flex items-center justify-between rounded-md border border-input bg-background px-3 py-2"
               >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">@{c.name}</p>
-                  <p className="text-xs text-muted-foreground">{c.category}</p>
-                </div>
+                <p className="min-w-0 truncate text-sm font-medium">@{c.name}</p>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -115,32 +109,19 @@ export function TelegramChannelsSettings() {
             )}
           </ul>
 
-          <div className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="tg-name">Канал</Label>
-                <Input
-                  id="tg-name"
-                  placeholder="@channel или channel"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addChannel()}
-                  disabled={saving}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="tg-category">Категория</Label>
-                <Input
-                  id="tg-category"
-                  placeholder="vacancy"
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addChannel()}
-                  disabled={saving}
-                />
-              </div>
+          <div className="flex gap-2">
+            <div className="flex-1 space-y-1.5">
+              <Label htmlFor="tg-name">Канал</Label>
+              <Input
+                id="tg-name"
+                placeholder="@channel или channel"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addChannel()}
+                disabled={saving}
+              />
             </div>
-            <Button onClick={addChannel} disabled={saving || !newName.trim()} className="w-full sm:w-auto">
+            <Button onClick={addChannel} disabled={saving || !newName.trim()} className="self-end">
               <Plus className="mr-2 h-4 w-4" />
               Добавить
             </Button>

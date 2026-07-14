@@ -10,6 +10,7 @@ const SOURCE_BY_ID: Record<string, SourceInfo> = {
   'rabota:': { name: 'Rabota.ru', badgeClass: 'bg-sky-500/10 text-sky-600 border-sky-500/20 dark:text-sky-400' },
   'sj:': { name: 'SuperJob', badgeClass: 'bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400' },
   'tg:': { name: 'Telegram', badgeClass: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20 dark:text-cyan-400' },
+  'telegram:': { name: 'Telegram', badgeClass: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20 dark:text-cyan-400' },
   'remoteok:': { name: 'RemoteOK', badgeClass: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400' },
   'wwr:': { name: 'We Work Remotely', badgeClass: 'bg-violet-500/10 text-violet-600 border-violet-500/20 dark:text-violet-400' },
   '4dw:': { name: '4DayWeek', badgeClass: 'bg-pink-500/10 text-pink-600 border-pink-500/20 dark:text-pink-400' },
