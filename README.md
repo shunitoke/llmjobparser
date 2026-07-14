@@ -94,6 +94,10 @@ Output: `desktop/dist/vibejob.exe`
 
 **Desktop** — PyInstaller (single-file EXE), PyWebview, pywin32 (DPAPI)
 
+## Support
+
+Если проект полезен — можно угостить кофе: [Donat](https://web.tribute.tg/p/A0B)
+
 ## License
 
 MIT
