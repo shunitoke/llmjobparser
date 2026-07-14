@@ -4,9 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ApiKeySettings } from './ApiKeySettings';
 import { ResumeUpload } from './ResumeUpload';
+import { ThemeToggle } from './ThemeToggle';
 import { getDesktopApi } from '@/lib/desktop';
 
-export function FirstRunKeyPrompt({ onSaved }: { onSaved: (resumePrompt?: string) => void }) {
+export function FirstRunKeyPrompt({ isDark, onToggleTheme, onSaved }: {
+  isDark: boolean;
+  onToggleTheme: () => void;
+  onSaved: (resumePrompt?: string) => void;
+}) {
   const [step, setStep] = useState<'key' | 'resume'>('key');
   const [resumePrompt, setResumePrompt] = useState('');
 
@@ -23,19 +28,22 @@ export function FirstRunKeyPrompt({ onSaved }: { onSaved: (resumePrompt?: string
     <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-12">
       <Card className="w-full max-w-md">
         <CardContent className="space-y-6 pt-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <svg viewBox="0 0 32 32" className="h-6 w-6" fill="none" aria-hidden="true">
-                <circle cx="14" cy="14" r="10" stroke="currentColor" strokeWidth="2.5" />
-                <circle cx="14" cy="14" r="6" stroke="currentColor" strokeWidth="1.5" opacity="0.6" />
-                <circle cx="14" cy="14" r="2.5" fill="currentColor" />
-                <path d="M21.5 21.5 L28 28" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-              </svg>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <svg viewBox="0 0 32 32" className="h-6 w-6" fill="none" aria-hidden="true">
+                  <circle cx="14" cy="14" r="10" stroke="currentColor" strokeWidth="2.5" />
+                  <circle cx="14" cy="14" r="6" stroke="currentColor" strokeWidth="1.5" opacity="0.6" />
+                  <circle cx="14" cy="14" r="2.5" fill="currentColor" />
+                  <path d="M21.5 21.5 L28 28" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+              </div>
+              <div className="font-display text-lg font-semibold tracking-tight">
+                <span className="text-foreground">vibe</span>
+                <span className="text-primary">job</span>
+              </div>
             </div>
-            <div className="font-display text-lg font-semibold tracking-tight">
-              <span className="text-foreground">vibe</span>
-              <span className="text-primary">job</span>
-            </div>
+            <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />
           </div>
 
           {step === 'key' ? (

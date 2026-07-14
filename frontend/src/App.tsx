@@ -51,10 +51,19 @@ function App() {
 
   useEffect(() => {
     const saved = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const shouldBeDark = saved ? saved === 'dark' : prefersDark;
-    document.documentElement.classList.toggle('dark', shouldBeDark);
-    setIsDark(shouldBeDark);
+    const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
+    const apply = (dark: boolean) => {
+      document.documentElement.classList.toggle('dark', dark);
+      setIsDark(dark);
+    };
+    if (saved) {
+      apply(saved === 'dark');
+    } else {
+      apply(mq?.matches ?? false);
+      const handler = (e: MediaQueryListEvent) => apply(e.matches);
+      mq?.addEventListener('change', handler);
+      return () => mq?.removeEventListener('change', handler);
+    }
   }, []);
 
   useEffect(() => {
@@ -201,6 +210,8 @@ function App() {
   if (keyConfigured === false) {
     return (
       <FirstRunKeyPrompt
+        isDark={isDark}
+        onToggleTheme={toggleTheme}
         onSaved={(resumePrompt) => {
           setKeyConfigured(true);
           if (resumePrompt) setPrompt(resumePrompt);
