@@ -8,7 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 import json
 import asyncio
-from datetime import datetime
+import os
+import sys
+import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 from app.database import init_db, get_db
@@ -225,12 +228,55 @@ async def get_sessions(db: AsyncSession = Depends(get_db)):
     return sessions
 
 
-# Serve the built frontend. In development the dist folder lives next to the
-# backend under ``frontend/dist``; when bundled, ``frontend/dist`` is copied
-# next to the executable.
-project_root = Path(__file__).resolve().parent.parent.parent
-static_dir = project_root / "frontend" / "dist"
-if not static_dir.exists():
-    static_dir = Path(__file__).resolve().parent / "static"
+def _debug_static_log(message: str) -> None:
+    """Append a debug line to a file so bundled runtime issues can be inspected."""
+    try:
+        log_dir = Path(os.environ.get("APP_DATA_DIR", tempfile.gettempdir()))
+        log_dir.mkdir(parents=True, exist_ok=True)
+        with (log_dir / "static-debug.log").open("a", encoding="utf-8") as f:
+            f.write(f"{datetime.now(timezone.utc).isoformat()} {message}\n")
+    except Exception:
+        pass
+
+
+def resolve_static_dir() -> Path:
+    """Return the directory containing the built frontend.
+
+    In development the dist folder lives next to the backend under
+    ``frontend/dist``. When bundled with PyInstaller, the files are extracted
+    to ``sys._MEIPASS``; PyInstaller 6+ places user data inside an
+    ``_internal`` subdirectory, older versions place them at the MEIPASS root.
+    """
+    candidates: list[Path] = []
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        meipass = Path(sys._MEIPASS)
+        candidates = [
+            meipass / "_internal" / "frontend" / "dist",
+            meipass / "frontend" / "dist",
+        ]
+    else:
+        project_root = Path(__file__).resolve().parent.parent.parent
+        candidates = [
+            project_root / "frontend" / "dist",
+            Path(__file__).resolve().parent / "static",
+        ]
+
+    _debug_static_log(f"resolve_static_dir: frozen={getattr(sys, 'frozen', False)} meipass={getattr(sys, '_MEIPASS', None)} candidates={[str(c) for c in candidates]}")
+    for candidate in candidates:
+        _debug_static_log(f"  checking {candidate}: exists={candidate.exists()} is_dir={candidate.is_dir() if candidate.exists() else False}")
+        if candidate.exists():
+            return candidate
+    return candidates[0]
+
+
+# Serve the built frontend at the root.
+static_dir = resolve_static_dir()
+_debug_static_log(f"static_dir resolved to {static_dir}")
 if static_dir.exists():
-    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="frontend")
+    try:
+        app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="frontend")
+        _debug_static_log(f"mounted StaticFiles at {static_dir}")
+    except Exception as exc:
+        _debug_static_log(f"failed to mount StaticFiles: {exc}")
+else:
+    _debug_static_log("static_dir does not exist; frontend will not be served")
