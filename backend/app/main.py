@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from fastapi import FastAPI, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi import FastAPI, Depends, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -57,12 +57,8 @@ async def startup():
 
 
 @app.get("/api/health")
-async def health(request: Request):
-    origin = request.headers.get("origin", "")
-    headers = {}
-    if origin:
-        headers["Access-Control-Allow-Origin"] = origin
-    return JSONResponse(content={"status": "ok"}, headers=headers)
+async def health():
+    return {"status": "ok"}
 
 
 class GigaChatKeyPayload(BaseModel):

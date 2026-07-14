@@ -52,8 +52,6 @@ def get_app_data_dir() -> Path:
 
 
 def get_backend_executable() -> Path:
-    # PyInstaller single-file build re-uses the same executable for the
-    # backend by setting VIBEJOB_BACKEND=1 in the subprocess environment.
     return Path(sys.executable)
 
 
@@ -63,8 +61,6 @@ def start_backend(port: int, app_data_dir: Path) -> subprocess.Popen:
     env["APP_DATA_DIR"] = str(app_data_dir)
     env["HOST"] = "127.0.0.1"
 
-    # Make sure the backend subprocess can locate ``app.main`` even when the
-    # launcher is started with a relative PYTHONPATH.
     project_root = Path(__file__).resolve().parent.parent
     backend_dir = project_root / "backend"
     pythonpath_parts = [str(project_root), str(backend_dir)]
@@ -119,9 +115,19 @@ def main() -> None:
     app_data_dir = get_app_data_dir()
     app_data_dir.mkdir(parents=True, exist_ok=True)
 
+    debug_log = app_data_dir / "vibejob-launcher.log"
+    def debug(msg: str) -> None:
+        try:
+            with open(debug_log, "a", encoding="utf-8") as f:
+                f.write(f"{time.strftime('%H:%M:%S')} {msg}\n")
+        except Exception:
+            pass
+
     bridge = ApiBridge(app_data_dir=app_data_dir)
     port = get_free_port()
+    debug(f"port={port} starting backend...")
     process = start_backend(port, app_data_dir)
+    debug(f"backend pid={process.pid}")
 
     log_thread = Thread(target=stream_logs, args=(process,), daemon=True)
     log_thread.start()
@@ -135,15 +141,33 @@ def main() -> None:
         min_size=(900, 600),
     )
     window.expose(bridge.getKeyStatus, bridge.setKey, bridge.deleteKey, bridge.getStoredKey, bridge.openExternalLink)
+    debug("window created, starting gui loop...")
+
+    def on_started():
+        debug("on_started: waiting for backend...")
+        ok = wait_for_backend(port)
+        debug(f"on_started: backend ready={ok}")
+        if ok:
+            url = f"http://127.0.0.1:{port}/?desktop=1"
+            debug(f"on_started: navigating to {url}")
+            window.load_url(url)
+            debug("on_started: load_url called")
+        else:
+            window.evaluate_js(
+                "document.getElementById('hint').textContent = 'Не удалось запустить сервер. Перезапустите приложение.'"
+            )
+            process.terminate()
 
     try:
-        webview.start(debug=False)
+        webview.start(func=on_started, debug=False)
     finally:
+        debug("shutting down...")
         process.terminate()
         try:
             process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             process.kill()
+        debug("done")
 
 
 if __name__ == "__main__":

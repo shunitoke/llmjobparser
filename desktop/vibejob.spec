@@ -17,6 +17,7 @@ a = Analysis(
         (str(frontend_dist), "frontend/dist"),
     ],
     hiddenimports=[
+        # Backend application modules
         "app.main",
         "app.config",
         "app.database",
@@ -35,25 +36,44 @@ a = Analysis(
         "app.scrapers.djinni",
         "app.scrapers.telegram",
         "feedparser",
+        # Web framework and server
         "uvicorn",
+        "uvicorn.logging",
+        "uvicorn.loops.auto",
+        "uvicorn.protocols.http.auto",
+        "uvicorn.protocols.websockets.auto",
         "fastapi",
         "fastapi.middleware.cors",
         "fastapi.staticfiles",
+        "starlette",
+        "starlette.middleware",
+        # Data validation and settings
         "pydantic",
+        "pydantic.v1",
+        "pydantic_core",
         "pydantic_settings",
+        # Database
         "sqlalchemy",
         "sqlalchemy.ext.asyncio",
         "sqlalchemy.dialects.sqlite",
         "aiosqlite",
+        # HTTP client
         "httpx",
+        # HTML parsing
         "bs4",
         "lxml",
         "lxml.etree",
+        "lxml._elementpath",
+        # Environment and security
+        "dotenv",
+        # Desktop launcher
         "webview",
         "desktop.api_bridge",
         "desktop.key_store",
+        # Settings / resume parsing
         "app.settings_store",
         "app.resume_parser",
+        "python_multipart",
     ],
     hookspath=[],
     hooksconfig={},
@@ -61,10 +81,8 @@ a = Analysis(
     excludes=[
         "tkinter",
         "unittest",
-        "distutils",
         "setuptools",
         "test",
-        "email",
         "pydoc",
     ],
     win_no_prefer_redirects=False,
