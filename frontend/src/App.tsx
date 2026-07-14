@@ -427,7 +427,7 @@ function App() {
               GitHub
             </a>
             <a href="https://web.tribute.tg/p/A0B" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors" title="Поблагодарить">
-              ❤️ Поблагодарить
+              💸 Поблагодарить
             </a>
           </div>
         </div>
