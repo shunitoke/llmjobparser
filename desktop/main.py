@@ -126,22 +126,15 @@ def main() -> None:
     log_thread = Thread(target=stream_logs, args=(process,), daemon=True)
     log_thread.start()
 
+    loading_html = LOADING_HTML.replace("__PORT__", str(port))
     window = webview.create_window(
         "vibejob",
-        html=LOADING_HTML,
+        html=loading_html,
         width=1280,
         height=800,
         min_size=(900, 600),
     )
     window.expose(bridge.getKeyStatus, bridge.setKey, bridge.deleteKey, bridge.getStoredKey, bridge.openExternalLink)
-
-    def navigate_when_ready():
-        if wait_for_backend(port):
-            window.load_url(f"http://127.0.0.1:{port}/?desktop=1")
-        else:
-            process.terminate()
-
-    Thread(target=navigate_when_ready, daemon=True).start()
 
     try:
         webview.start(debug=False)

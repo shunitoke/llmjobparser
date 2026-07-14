@@ -51,10 +51,20 @@ const HINTS = [
   "Мы работаем, чтобы жить, а не живём, чтобы работать. — народная мудрость",
   "Жизнь слишком коротка, чтобы тратить её на работу, которую не любишь. — неизвестный автор",
 ];
+const PORT = __PORT__;
 let i = 0;
 const el = document.getElementById('hint');
 el.textContent = HINTS[0];
 setInterval(() => { i = (i + 1) % HINTS.length; el.textContent = HINTS[i]; }, 4000);
+(async function poll() {
+  while (true) {
+    try {
+      const r = await fetch('http://127.0.0.1:' + PORT + '/api/health');
+      if (r.status === 200) { window.location.href = 'http://127.0.0.1:' + PORT + '/?desktop=1'; return; }
+    } catch(e) {}
+    await new Promise(r => setTimeout(r, 500));
+  }
+})();
 </script>
 </body>
 </html>"""

@@ -58,7 +58,10 @@ async def startup():
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok"}
+    return JSONResponse(
+        content={"status": "ok"},
+        headers={"Access-Control-Allow-Origin": "*"},
+    )
 
 
 class GigaChatKeyPayload(BaseModel):
