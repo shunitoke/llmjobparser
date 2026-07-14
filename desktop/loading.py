@@ -52,9 +52,9 @@ const HINTS = [
   "Жизнь слишком коротка, чтобы тратить её на работу, которую не любишь. — неизвестный автор",
 ];
 const PORT = __PORT__;
-let i = 0;
+let i = PORT % HINTS.length;
 const el = document.getElementById('hint');
-el.textContent = HINTS[0];
+el.textContent = HINTS[i];
 setInterval(() => { i = (i + 1) % HINTS.length; el.textContent = HINTS[i]; }, 4000);
 (async function poll() {
   while (true) {
