@@ -64,15 +64,10 @@ class TelegramScraper(BaseScraper):
             lower = text.lower()
             if any(marker in lower for marker in ad_markers):
                 return None
-            link_elem = msg.select_one("a[href*='t.me/']")
-            url = ""
-            if link_elem:
-                url = link_elem.get("href", "")
-            if not url:
-                channel_name = channel.get("name", "")
-                message_id = msg.get("data-post-id") or msg.get("id", "")
-                url = f"https://t.me/s/{channel_name}/{message_id}"
-            source_id = self._extract_id(url)
+            channel_name = channel.get("name", "")
+            message_id = msg.get("data-post-id") or msg.get("id", "")
+            source_id = f"{channel_name}:{message_id}"
+            url = f"https://t.me/s/{channel_name}/{message_id}"
             title = text.split("\n")[0][:120]
             time_elem = msg.select_one("time")
             published_at = ""

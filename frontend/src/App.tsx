@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ApiKeySettings } from '@/components/ApiKeySettings';
@@ -203,8 +203,13 @@ function App() {
 
   if (keyConfigured === null) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex min-h-screen items-center justify-center bg-[#0f172a]">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-[3px] border-[#1e293b] border-t-[#22c55e]" />
+          <div className="text-xl font-bold tracking-tight text-[#e2e8f0]">
+            vibe<span className="text-[#22c55e]">job</span>
+          </div>
+        </div>
       </div>
     );
   }

@@ -17,7 +17,7 @@ class ApiBridge:
         try:
             self._store.set_key(key)
             return {"status": "ok"}
-        except ValueError as e:
+        except Exception as e:
             return {"status": "error", "message": str(e)}
 
     def deleteKey(self) -> dict[str, Any]:

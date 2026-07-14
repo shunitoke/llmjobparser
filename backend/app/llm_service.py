@@ -558,8 +558,10 @@ Respond STRICTLY in JSON format:
                     continue
                 title = (c.get("title") or "").strip().replace("\n", " ")[:80]
                 company = (c.get("company") or "").strip().replace("\n", " ")[:50]
+                salary = (c.get("salary") or "").strip().replace("\n", " ")[:50]
                 location = (c.get("location") or "").strip().replace("\n", " ")[:40]
-                lines.append(f"{cid} | {title} | {company} | {location}")
+                source = (c.get("source") or "").strip()[:20]
+                lines.append(f"{cid} | {title} | {company} | {salary} | {location} | {source}")
             return "\n".join(lines)
 
         async def pick_from_chunk(chunk: List[Dict], k: int) -> List[str]:

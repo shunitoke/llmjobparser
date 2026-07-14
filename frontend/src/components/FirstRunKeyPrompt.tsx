@@ -151,11 +151,19 @@ export function FirstRunKeyPrompt({ isDark, onToggleTheme, onSaved }: {
               )}
 
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => onSaved()} className="flex-1">
+                <Button
+                  variant="outline"
+                  onClick={() => onSaved()}
+                  className="flex-1"
+                >
                   Пропустить
                 </Button>
-                <Button onClick={() => onSaved(resumePrompt)} className="flex-1">
-                  Начать поиск
+                <Button
+                  onClick={() => onSaved(resumePrompt)}
+                  className="flex-1"
+                  disabled={!resumePrompt}
+                >
+                  {resumePrompt ? 'Начать поиск' : 'Загрузите резюме'}
                 </Button>
               </div>
 

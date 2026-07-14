@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { FileUp, Loader2, X, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { useRef, useState, useEffect } from 'react';
+import { FileUp, Loader2, X, ChevronDown, ChevronUp, Check, Type } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ResumeUploadProps {
@@ -22,13 +22,26 @@ interface ParsedData {
 
 export function ResumeUpload({ onParsed }: ResumeUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [mode, setMode] = useState<'file' | 'text'>('file');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [textValue, setTextValue] = useState('');
   const [parsedData, setParsedData] = useState<ParsedData | null>(null);
-  const [showParsed, setShowParsed] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [textMode, setTextMode] = useState(false);
+  const [textValue, setTextValue] = useState('');
+
+  useEffect(() => {
+    const handler = (e: ClipboardEvent) => {
+      if (parsedData || loading || textMode) return;
+      const text = e.clipboardData?.getData('text/plain');
+      if (text && text.length > 30) {
+        e.preventDefault();
+        handleTextParse(text);
+      }
+    };
+    document.addEventListener('paste', handler);
+    return () => document.removeEventListener('paste', handler);
+  }, [parsedData, loading, textMode]);
 
   const handleFile = async (file: File) => {
     if (!ALLOWED_TYPES.includes(file.type)) {
@@ -41,8 +54,8 @@ export function ResumeUpload({ onParsed }: ResumeUploadProps) {
     }
     setLoading(true);
     setError(null);
-    setFileName(file.name);
     setParsedData(null);
+    setTextMode(false);
     try {
       const form = new FormData();
       form.append('file', file);
@@ -54,20 +67,18 @@ export function ResumeUpload({ onParsed }: ResumeUploadProps) {
       }
       const data: ParsedData = await res.json();
       setParsedData(data);
-      setShowParsed(true);
+      setExpanded(false);
       const prompt = data.search_prompt || (data.position ? `Вакансии по резюме: ${data.position}` : '');
       if (prompt) onParsed(prompt);
     } catch (e) {
       setError((e as Error).message);
-      setFileName(null);
     } finally {
       setLoading(false);
       if (inputRef.current) inputRef.current.value = '';
     }
   };
 
-  const handleTextParse = async () => {
-    if (!textValue.trim()) return;
+  const handleTextParse = async (text: string) => {
     setLoading(true);
     setError(null);
     setParsedData(null);
@@ -75,7 +86,7 @@ export function ResumeUpload({ onParsed }: ResumeUploadProps) {
       const res = await fetch('/api/resume/parse-text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: textValue }),
+        body: JSON.stringify({ text }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -83,7 +94,9 @@ export function ResumeUpload({ onParsed }: ResumeUploadProps) {
       }
       const data: ParsedData = await res.json();
       setParsedData(data);
-      setShowParsed(true);
+      setExpanded(false);
+      setTextMode(false);
+      setTextValue('');
       const prompt = data.search_prompt || (data.position ? `Вакансии по резюме: ${data.position}` : '');
       if (prompt) onParsed(prompt);
     } catch (e) {
@@ -94,70 +107,68 @@ export function ResumeUpload({ onParsed }: ResumeUploadProps) {
   };
 
   const clear = () => {
-    setFileName(null);
     setError(null);
     setParsedData(null);
-    setShowParsed(false);
+    setExpanded(false);
+    setTextMode(false);
     setTextValue('');
     if (inputRef.current) inputRef.current.value = '';
   };
 
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-4">
-        <div className="flex gap-1 rounded-lg border bg-muted/30 p-0.5" role="tablist" aria-label="Способ ввода резюме">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'file'}
-            onClick={() => setMode('file')}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-              mode === 'file' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Файл
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'text'}
-            onClick={() => setMode('text')}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-              mode === 'text' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Текст
-          </button>
-        </div>
-      </div>
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFile(file);
+  };
 
-      {mode === 'file' ? (
-        <div className="flex flex-col gap-2">
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".pdf,.doc,.docx,.txt"
-            className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
-          />
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()} disabled={loading}>
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
-              {loading ? 'Читаем резюме…' : 'Загрузить резюме'}
-            </Button>
-            {fileName && (
-              <span className="inline-flex items-center gap-1 rounded-full border bg-muted px-2 py-0.5 text-xs">
-                {fileName}
-                <button type="button" onClick={clear} className="text-muted-foreground hover:text-foreground" aria-label="Очистить">
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )}
-          </div>
+  return (
+    <div className="relative">
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".pdf,.doc,.docx,.txt"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+      />
+
+      {!parsedData && !loading && !textMode && (
+        <div
+          onDrop={handleDrop}
+          onDragOver={(e) => e.preventDefault()}
+          className="flex items-center justify-center gap-4 rounded-lg border-2 border-dashed border-border px-4 py-3 text-sm text-muted-foreground"
+        >
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="inline-flex items-center gap-1.5 font-medium transition-colors hover:text-foreground"
+          >
+            <FileUp className="h-4 w-4" />
+            Загрузить резюме
+          </button>
+          <span className="text-xs opacity-40">|</span>
+          <button
+            type="button"
+            onClick={() => { setTextMode(true); setTimeout(() => textareaRef.current?.focus(), 0); }}
+            className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
+          >
+            <Type className="h-3.5 w-3.5" />
+            <span>Вставить текст</span>
+          </button>
         </div>
-      ) : (
-        <div className="flex flex-col gap-2">
+      )}
+
+      {!parsedData && !loading && textMode && (
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => setTextMode(false)}
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <FileUp className="h-3.5 w-3.5" />
+            Загрузить файл
+          </button>
           <textarea
+            ref={textareaRef}
             value={textValue}
             onChange={(e) => setTextValue(e.target.value)}
             placeholder="Вставьте текст резюме целиком…"
@@ -166,56 +177,75 @@ export function ResumeUpload({ onParsed }: ResumeUploadProps) {
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           />
           <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={handleTextParse} disabled={loading || !textValue.trim()}>
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {loading ? 'Анализируем…' : 'Проанализировать'}
+            <Button type="button" variant="outline" size="sm" onClick={() => handleTextParse(textValue)} disabled={loading || !textValue.trim()}>
+              {loading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+              {loading ? 'Анализируем…' : 'Анализировать'}
             </Button>
-            {textValue && !loading && (
-              <button type="button" onClick={clear} className="text-xs text-muted-foreground hover:text-foreground">
-                Очистить
-              </button>
-            )}
+            <button type="button" onClick={clear} className="text-xs text-muted-foreground hover:text-foreground">
+              Отмена
+            </button>
           </div>
         </div>
       )}
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {loading && !textMode && (
+        <div className="rounded-lg border-2 border-dashed border-border px-4 py-3 text-center text-sm text-muted-foreground">
+          <Loader2 className="mr-1.5 inline-block h-4 w-4 animate-spin" />
+          Анализируем резюме…
+        </div>
+      )}
 
       {parsedData && (
-        <div className="rounded-lg border border-input/60 bg-muted/30">
+        <div className="overflow-hidden rounded-lg border">
           <button
             type="button"
-            onClick={() => setShowParsed((v) => !v)}
-            className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-medium text-foreground hover:bg-muted/50"
+            onClick={() => setExpanded((v) => !v)}
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/30"
           >
-            <span>Данные из резюме</span>
-            {showParsed ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            <Check className="h-4 w-4 shrink-0 text-primary" />
+            <span className="truncate font-medium">{parsedData.position || 'Резюме'}</span>
+            {parsedData.skills.length > 0 && (
+              <>
+                <span className="text-muted-foreground/50">·</span>
+                <span className="shrink-0 text-muted-foreground">{parsedData.skills.length} навыков</span>
+              </>
+            )}
+            <span className="flex-1" />
+            {expanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); clear(); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); clear(); } }}
+              className="ml-1 cursor-pointer text-muted-foreground hover:text-foreground"
+              aria-label="Очистить"
+            >
+              <X className="h-3.5 w-3.5" />
+            </span>
           </button>
-          {showParsed && (
-            <div className="space-y-2 border-t px-3 py-2 text-xs">
+
+          {expanded && (
+            <div className="border-t px-3 py-2 text-xs leading-relaxed text-muted-foreground">
               {parsedData.position && (
-                <p><span className="text-muted-foreground">Должность:</span> {parsedData.position}</p>
+                <p><span className="text-foreground">Должность:</span> {parsedData.position}</p>
               )}
               {parsedData.skills?.length > 0 && (
-                <p><span className="text-muted-foreground">Навыки:</span> {parsedData.skills.join(', ')}</p>
+                <p><span className="text-foreground">Навыки:</span> {parsedData.skills.join(', ')}</p>
               )}
               {parsedData.experience_summary && (
-                <p><span className="text-muted-foreground">Опыт:</span> {parsedData.experience_summary}</p>
+                <p><span className="text-foreground">Опыт:</span> {parsedData.experience_summary}</p>
               )}
               {parsedData.search_prompt && (
-                <p><span className="text-muted-foreground">Сформирован запрос:</span> {parsedData.search_prompt}</p>
+                <p><span className="text-foreground">Запрос:</span> {parsedData.search_prompt}</p>
               )}
             </div>
           )}
         </div>
       )}
 
-      <div className="flex items-start gap-1.5 text-[11px] text-muted-foreground leading-relaxed">
-        <Info className="mt-0.5 h-3 w-3 shrink-0" />
-        <span>
-          Загрузите резюме или вставьте его текст — нейросеть выделит навыки и опыт, чтобы точнее подбирать вакансии под вас. Найденные вакансии сразу фильтруются по релевантности.
-        </span>
-      </div>
+      {error && !loading && (
+        <p className="mt-1.5 text-xs text-destructive">{error}</p>
+      )}
     </div>
   );
 }

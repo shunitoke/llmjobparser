@@ -6,11 +6,6 @@ import time
 from pathlib import Path
 from threading import Thread
 
-import httpx
-
-# When packaged as a single executable, the backend is started by re-executing
-# the same binary with VIBEJOB_BACKEND=1. This keeps the launcher and server
-# in one file while avoiding a separate backend.exe.
 if __name__ == "__main__" and os.environ.get("VIBEJOB_BACKEND") == "1":
     for _fd, _attr in ((1, "stdout"), (2, "stderr")):
         if getattr(sys, _attr, None) is None:
@@ -33,10 +28,10 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
+import httpx
 import webview
 
 from desktop.api_bridge import ApiBridge
-from desktop.loading import LOADING_HTML
 
 
 def get_free_port() -> int:
@@ -74,28 +69,16 @@ def start_backend(port: int, app_data_dir: Path) -> subprocess.Popen:
         env["VIBEJOB_BACKEND"] = "1"
         args = [str(backend_exe)]
     else:
-        backend_dir = Path(__file__).resolve().parent / ".." / "backend"
         args = [str(backend_exe), "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", str(port)]
 
     return subprocess.Popen(
         args,
         cwd=str(backend_exe.parent),
         env=env,
-        stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
     )
-
-
-def stream_logs(process: subprocess.Popen) -> None:
-    try:
-        for line in iter(process.stdout.readline, ""):
-            if not line:
-                break
-            print(line, end="")
-    except Exception:
-        pass
 
 
 def wait_for_backend(port: int, timeout: float = 30.0) -> bool:
@@ -111,68 +94,49 @@ def wait_for_backend(port: int, timeout: float = 30.0) -> bool:
     return False
 
 
+def stream_logs(process: subprocess.Popen) -> None:
+    try:
+        for line in iter(process.stdout.readline, ""):
+            if not line:
+                break
+            print(line, end="")
+    except Exception:
+        pass
+
+
 def main() -> None:
     app_data_dir = get_app_data_dir()
     app_data_dir.mkdir(parents=True, exist_ok=True)
 
-    debug_log = app_data_dir / "vibejob-launcher.log"
-    def debug(msg: str) -> None:
-        try:
-            with open(debug_log, "a", encoding="utf-8") as f:
-                f.write(f"{time.strftime('%H:%M:%S')} {msg}\n")
-        except Exception:
-            pass
-
     bridge = ApiBridge(app_data_dir=app_data_dir)
+    stored_key = bridge._store.get_key()
+    if stored_key:
+        os.environ["GIGACHAT_AUTH_KEY"] = stored_key
+
     port = get_free_port()
-    debug(f"port={port} starting backend...")
     process = start_backend(port, app_data_dir)
-    debug(f"backend pid={process.pid}")
 
-    log_thread = Thread(target=stream_logs, args=(process,), daemon=True)
-    log_thread.start()
+    Thread(target=stream_logs, args=(process,), daemon=True).start()
 
-    loading_html = LOADING_HTML.replace("__PORT__", str(port))
+    wait_for_backend(port)
+
     window = webview.create_window(
         "vibejob",
-        html=loading_html,
+        url=f"http://127.0.0.1:{port}/?desktop=1",
         width=1280,
         height=800,
         min_size=(900, 600),
     )
     window.expose(bridge.getKeyStatus, bridge.setKey, bridge.deleteKey, bridge.getStoredKey, bridge.openExternalLink)
-    debug("window created, starting gui loop...")
-
-    def on_shown():
-        def wait_and_navigate():
-            debug("waiting for backend...")
-            ok = wait_for_backend(port)
-            debug(f"backend ready={ok}")
-            if ok:
-                url = f"http://127.0.0.1:{port}/?desktop=1"
-                debug(f"navigating to {url}")
-                window.load_url(url)
-                debug("load_url called")
-            else:
-                window.evaluate_js(
-                    "document.getElementById('hint').textContent = 'Не удалось запустить сервер. Перезапустите приложение.'"
-                )
-                process.terminate()
-        Thread(target=wait_and_navigate, daemon=True).start()
-
-    window.events.shown += on_shown
-    debug("window.shown handler registered")
 
     try:
         webview.start(debug=False)
     finally:
-        debug("shutting down...")
         process.terminate()
         try:
             process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             process.kill()
-        debug("done")
 
 
 if __name__ == "__main__":
