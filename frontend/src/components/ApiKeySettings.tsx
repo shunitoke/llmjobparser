@@ -277,30 +277,32 @@ export function ApiKeySettings({ onSaved, onDeleted }: ApiKeySettingsProps) {
         )}
       </div>
 
-      <div className="space-y-1">
-        <Label>Модель</Label>
-        <div className="flex items-center gap-2 text-sm">
-          <code className="rounded bg-muted px-2 py-0.5 font-mono text-xs">{displayModel}</code>
-          <button
-            type="button"
-            className="text-xs text-muted-foreground hover:underline"
-            onClick={() => setShowModelField((v) => !v)}
-          >
-            {showModelField ? 'скрыть' : 'изменить'}
-          </button>
+      {provider !== 'gigachat' && (
+        <div className="space-y-1">
+          <Label>Модель</Label>
+          <div className="flex items-center gap-2 text-sm">
+            <code className="rounded bg-muted px-2 py-0.5 font-mono text-xs">{displayModel}</code>
+            <button
+              type="button"
+              className="text-xs text-muted-foreground hover:underline"
+              onClick={() => setShowModelField((v) => !v)}
+            >
+              {showModelField ? 'скрыть' : 'изменить'}
+            </button>
+          </div>
+          {showModelField && (
+            <Input
+              id="llm-model"
+              type="text"
+              placeholder={availableModels[0] || FALLBACK_MODELS[provider]}
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              disabled={loadingConfig}
+              className="mt-2"
+            />
+          )}
         </div>
-        {showModelField && (
-          <Input
-            id="llm-model"
-            type="text"
-            placeholder={availableModels[0] || FALLBACK_MODELS[provider]}
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            disabled={loadingConfig}
-            className="mt-2"
-          />
-        )}
-      </div>
+      )}
 
       {status === 'error' && <p className="text-sm text-destructive">{message}</p>}
       {status === 'ok' && <p className="text-sm text-primary">Настройки сохранены</p>}
