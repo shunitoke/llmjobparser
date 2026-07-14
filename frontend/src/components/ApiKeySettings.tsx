@@ -232,7 +232,7 @@ export function ApiKeySettings({ onSaved, onDeleted }: ApiKeySettingsProps) {
   const displayModel = model || (availableModels[0] || FALLBACK_MODELS[provider]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="space-y-2">
         <Label htmlFor="llm-provider">Провайдер</Label>
         <select
@@ -240,7 +240,7 @@ export function ApiKeySettings({ onSaved, onDeleted }: ApiKeySettingsProps) {
           value={provider}
           onChange={(e) => handleProviderChange(e.target.value as Provider)}
           disabled={loadingConfig}
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {Object.entries(PROVIDER_LABELS).map(([val, label]) => (
             <option key={val} value={val}>{label}</option>

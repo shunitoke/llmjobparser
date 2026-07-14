@@ -89,13 +89,13 @@ export function TelegramChannelsSettings() {
             {channels.map((c) => (
               <li
                 key={c.name}
-                className="flex items-center justify-between rounded-md border border-input bg-background px-3 py-2"
+                className="flex items-center justify-between rounded-lg border bg-card px-3 py-2.5"
               >
                 <p className="min-w-0 truncate text-sm font-medium">@{c.name}</p>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 shrink-0 text-destructive"
+                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
                   onClick={() => removeChannel(c.name)}
                   disabled={saving}
                   aria-label="Удалить"

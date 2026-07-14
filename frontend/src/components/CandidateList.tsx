@@ -30,7 +30,7 @@ export function CandidateList({
 }: CandidateListProps) {
   return (
     <details
-      className="rounded-lg border bg-card text-card-foreground"
+      className="rounded-xl border bg-card"
       open={isVisible}
       onToggle={(e) => {
         const nextOpen = (e.target as HTMLDetailsElement).open;
@@ -40,63 +40,59 @@ export function CandidateList({
       }}
     >
       <summary className="flex cursor-pointer list-none items-center justify-between p-4 marker:hidden">
-        <div>
-          <h3 className="text-base font-semibold">Найденные вакансии</h3>
-          <p className="text-sm text-muted-foreground">Предварительный список до финального отбора</p>
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-muted-foreground" aria-hidden="true">
+              <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium">Найденные вакансии</h3>
+            <p className="text-xs text-muted-foreground">Предварительный список до финального отбора</p>
+          </div>
         </div>
-        <span
-          className="pointer-events-none rounded-md border border-input bg-background px-3 py-1 text-xs font-medium"
-          aria-hidden="true"
-        >
+        <span className="rounded-md border bg-background px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
           {isVisible ? 'Скрыть' : 'Показать'}
         </span>
       </summary>
-      <div className="border-t p-4 pt-0">
-        <div className="mt-4 space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted-foreground">Фильтр:</span>
-            <Button
+      <div className="border-t p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground">Фильтр:</span>
+          <div className="inline-flex overflow-hidden rounded-lg border bg-card p-0.5">
+            <button
               type="button"
-              variant={selectedOnly === null ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => {
-                onSelectedOnlyChange(null);
-                onLoad(0, null);
-              }}
+              onClick={() => { onSelectedOnlyChange(null); onLoad(0, null); }}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
+                selectedOnly === null ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
             >
               Все
-            </Button>
-            <Button
+            </button>
+            <button
               type="button"
-              variant={selectedOnly === true ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => {
-                onSelectedOnlyChange(true);
-                onLoad(0, true);
-              }}
+              onClick={() => { onSelectedOnlyChange(true); onLoad(0, true); }}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
+                selectedOnly === true ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
             >
               Отобранные
-            </Button>
+            </button>
           </div>
+        </div>
 
+        <div className="mt-4 space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <div className="text-sm text-muted-foreground">Список кандидатов</div>
-            <Button type="button" variant="outline" size="sm" onClick={() => onLoad(offset, selectedOnly)} disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Обновить'}
-            </Button>
-          </div>
-
-          <div className="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              {total > 0 ? (
+            <div className="text-xs text-muted-foreground">
+              {total > 0 && (
                 <span>
                   Показано {offset + 1}–{Math.min(offset + limit, total)} из {total}
                 </span>
-              ) : (
-                <span>Пока вакансий нет</span>
               )}
             </div>
             <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => onLoad(offset, selectedOnly)} disabled={loading}>
+                {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Обновить'}
+              </Button>
               <Button
                 type="button"
                 variant="outline"
@@ -119,8 +115,10 @@ export function CandidateList({
           </div>
 
           <div className="max-h-64 space-y-2 overflow-y-auto pr-1 lg:max-h-96">
-            {loading && items.length === 0 && <div className="text-sm text-muted-foreground">Загружаем…</div>}
-            {!loading && items.length === 0 && <div className="text-sm text-muted-foreground">Пока вакансий нет</div>}
+            {loading && items.length === 0 && <p className="text-xs text-muted-foreground">Загружаем…</p>}
+            {!loading && total === 0 && items.length === 0 && (
+              <p className="py-4 text-center text-sm text-muted-foreground">Пока вакансий нет</p>
+            )}
             {items.map((c) => (
               <CandidateCard key={c.id} item={c} />
             ))}

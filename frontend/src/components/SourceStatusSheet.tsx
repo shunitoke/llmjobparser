@@ -47,7 +47,7 @@ export function SourceStatusSheet({ open, onClose }: SourceStatusSheetProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-end bg-background/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex justify-end"
       role="dialog"
       aria-modal="true"
       aria-labelledby="source-status-title"
@@ -55,12 +55,12 @@ export function SourceStatusSheet({ open, onClose }: SourceStatusSheetProps) {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="h-full w-full max-w-sm overflow-y-auto border-l bg-card p-6 text-card-foreground shadow-xl">
+      <div className="pointer-events-auto h-full w-full max-w-sm animate-slide-in-right overflow-y-auto border-l bg-background p-6 shadow-2xl">
         <div className="flex items-center justify-between gap-4">
-          <h2 id="source-status-title" className="text-lg font-semibold">
+          <h2 id="source-status-title" className="text-base font-semibold">
             Источники
           </h2>
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Закрыть">
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Закрыть" className="h-8 w-8">
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -87,7 +87,7 @@ export function SourceStatusSheet({ open, onClose }: SourceStatusSheetProps) {
             {entries.map(([name, value]) => (
               <li
                 key={name}
-                className="flex items-center justify-between rounded-md border border-input bg-background px-3 py-2"
+                className="flex items-center justify-between rounded-lg border bg-card px-3 py-2.5"
               >
                 <span className="text-sm font-medium">{SOURCE_KEY_LABELS[name] ?? name}</span>
                 <HealthBadge value={value} />
@@ -97,7 +97,7 @@ export function SourceStatusSheet({ open, onClose }: SourceStatusSheetProps) {
         )}
 
         {!loading && health?.superjob === 'blocked' && (
-          <div className="mt-3 rounded-md border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
+          <div className="mt-4 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
             SuperJob заблокировал автоматические запросы (капча). Используйте{' '}
             <a
               href="https://www.superjob.ru"
@@ -111,10 +111,12 @@ export function SourceStatusSheet({ open, onClose }: SourceStatusSheetProps) {
           </div>
         )}
 
-        <div className="mt-6 rounded-md border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
+        <div className="mt-4 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
           Глобальные источники и Telegram в РФ могут требовать VPN.
         </div>
       </div>
+
+      <div className="pointer-events-auto fixed inset-0 -z-10 bg-black/40" onClick={onClose} />
     </div>
   );
 }

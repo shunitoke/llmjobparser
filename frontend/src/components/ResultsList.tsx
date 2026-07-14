@@ -22,7 +22,7 @@ const SORT_OPTIONS: Array<{ value: ResultsSort; label: string }> = [
   { value: 'location', label: 'По адресу' },
 ];
 
-const TABS: Array<{ value: ResultsTab; label: string; count?: number }> = [
+const TABS: Array<{ value: ResultsTab; label: string }> = [
   { value: 'matched', label: 'Подходят' },
   { value: 'all', label: 'Все' },
   { value: 'unmatched', label: 'Не подходят' },
@@ -51,8 +51,8 @@ export function ResultsList({
       )}
 
       {isCompleted && matchedJobs.length === 0 && unmatchedJobs.length === 0 && (
-        <div className="mb-8 rounded-lg border border-input/60 bg-muted/40 p-6 text-center">
-          <p className="text-foreground">Пока вакансий нет</p>
+        <div className="mb-8 rounded-xl border bg-card p-8 text-center">
+          <p className="font-medium text-foreground">Пока вакансий нет</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Попробуйте уточнить запрос: роль, формат работы, зарплату или город.
           </p>
@@ -65,7 +65,7 @@ export function ResultsList({
             <div
               role="tablist"
               aria-label="Фильтр результатов"
-              className="inline-flex flex-wrap gap-2"
+              className="inline-flex overflow-hidden rounded-lg border bg-card p-0.5"
             >
               {TABS.map((tab) => {
                 const active = selectedTab === tab.value;
@@ -78,10 +78,10 @@ export function ResultsList({
                     aria-selected={active}
                     type="button"
                     onClick={() => onTabChange(tab.value)}
-                    className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors ${
+                    className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
                       active
-                        ? 'border-transparent bg-primary text-primary-foreground'
-                        : 'border-input bg-background hover:bg-muted'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
                     {tab.label}
@@ -98,7 +98,7 @@ export function ResultsList({
             </div>
 
             <div className="flex items-center gap-2 text-sm">
-              <label htmlFor="result-sort" className="text-muted-foreground">
+              <label htmlFor="result-sort" className="text-xs text-muted-foreground">
                 Сортировка:
               </label>
               <select
@@ -106,7 +106,7 @@ export function ResultsList({
                 name="result-sort"
                 value={sort}
                 onChange={(e) => onSortChange(e.target.value as ResultsSort)}
-                className="h-9 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-9 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {SORT_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -117,11 +117,15 @@ export function ResultsList({
             </div>
           </div>
 
-          <div className="space-y-4" role="tabpanel" aria-label={TABS.find((t) => t.value === selectedTab)?.label}>
+          <div className="space-y-3" role="tabpanel" aria-label={TABS.find((t) => t.value === selectedTab)?.label}>
             {visibleJobs.length === 0 ? (
               <p className="text-sm text-muted-foreground">Нет вакансий в этой категории.</p>
             ) : (
-              visibleJobs.map((job) => <JobCard key={job.id} job={job} />)
+              visibleJobs.map((job, i) => (
+                <div key={job.id} className="animate-fade-in" style={{ animationDelay: `${i * 30}ms`, animationFillMode: 'both' }}>
+                  <JobCard job={job} />
+                </div>
+              ))
             )}
           </div>
         </div>

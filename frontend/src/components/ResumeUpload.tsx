@@ -135,7 +135,7 @@ export function ResumeUpload({ onParsed }: ResumeUploadProps) {
         <div
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
-          className="flex items-center justify-center gap-4 rounded-lg border-2 border-dashed border-border px-4 py-3 text-sm text-muted-foreground"
+          className="flex items-center justify-center gap-4 rounded-xl border-2 border-dashed border-border px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-muted-foreground/30"
         >
           <button
             type="button"
@@ -145,7 +145,7 @@ export function ResumeUpload({ onParsed }: ResumeUploadProps) {
             <FileUp className="h-4 w-4" />
             Загрузить резюме
           </button>
-          <span className="text-xs opacity-40">|</span>
+          <span className="text-xs text-muted-foreground/30">|</span>
           <button
             type="button"
             onClick={() => { setTextMode(true); setTimeout(() => textareaRef.current?.focus(), 0); }}
@@ -154,6 +154,7 @@ export function ResumeUpload({ onParsed }: ResumeUploadProps) {
             <Type className="h-3.5 w-3.5" />
             <span>Вставить текст</span>
           </button>
+          <span className="text-xs text-muted-foreground/50">(или вставьте из буфера)</span>
         </div>
       )}
 
@@ -174,7 +175,7 @@ export function ResumeUpload({ onParsed }: ResumeUploadProps) {
             placeholder="Вставьте текст резюме целиком…"
             rows={4}
             disabled={loading}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           />
           <div className="flex items-center gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => handleTextParse(textValue)} disabled={loading || !textValue.trim()}>
@@ -189,24 +190,24 @@ export function ResumeUpload({ onParsed }: ResumeUploadProps) {
       )}
 
       {loading && !textMode && (
-        <div className="rounded-lg border-2 border-dashed border-border px-4 py-3 text-center text-sm text-muted-foreground">
+        <div className="rounded-xl border-2 border-dashed border-border px-4 py-3 text-center text-sm text-muted-foreground">
           <Loader2 className="mr-1.5 inline-block h-4 w-4 animate-spin" />
           Анализируем резюме…
         </div>
       )}
 
       {parsedData && (
-        <div className="overflow-hidden rounded-lg border">
+        <div className="overflow-hidden rounded-xl border">
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/30"
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted/30"
           >
             <Check className="h-4 w-4 shrink-0 text-primary" />
             <span className="truncate font-medium">{parsedData.position || 'Резюме'}</span>
             {parsedData.skills.length > 0 && (
               <>
-                <span className="text-muted-foreground/50">·</span>
+                <span className="text-muted-foreground/30">·</span>
                 <span className="shrink-0 text-muted-foreground">{parsedData.skills.length} навыков</span>
               </>
             )}
@@ -225,7 +226,7 @@ export function ResumeUpload({ onParsed }: ResumeUploadProps) {
           </button>
 
           {expanded && (
-            <div className="border-t px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+            <div className="border-t px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
               {parsedData.position && (
                 <p><span className="text-foreground">Должность:</span> {parsedData.position}</p>
               )}

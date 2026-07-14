@@ -2,54 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/GeistVariable.woff2') format('woff2');
+  font-display: swap;
+  font-weight: 100 900;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMonoVariable.woff2') format('woff2');
+  font-display: swap;
+  font-weight: 100 900;
+}
+
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
+    --background: 0 0% 98%;
+    --foreground: 240 6% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 240 6% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 240 6% 10%;
     --primary: 160 84% 39%;
-    --primary-foreground: 160 100% 8%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 168 36% 94%;
-    --accent-foreground: 168 61% 20%;
+    --primary-foreground: 160 60% 98%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 6% 10%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
+    --accent: 160 30% 94%;
+    --accent-foreground: 160 60% 18%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
     --ring: 160 84% 39%;
     --success: 160 84% 39%;
-    --success-foreground: 160 61% 20%;
+    --success-foreground: 160 60% 18%;
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
-    --card: 222 40% 14%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 40% 14%;
-    --popover-foreground: 210 40% 98%;
+    --background: 240 10% 4%;
+    --foreground: 0 0% 98%;
+    --card: 240 6% 10%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 6% 10%;
+    --popover-foreground: 0 0% 98%;
     --primary: 160 84% 39%;
-    --primary-foreground: 160 20% 98%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 167 32% 18%;
-    --accent-foreground: 158 64% 78%;
+    --primary-foreground: 160 60% 98%;
+    --secondary: 240 4% 16%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 4% 16%;
+    --muted-foreground: 240 5% 65%;
+    --accent: 160 30% 12%;
+    --accent-foreground: 160 60% 75%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 0 0% 100%;
-    --border: 217 33% 22%;
-    --input: 217 33% 22%;
+    --border: 240 4% 22%;
+    --input: 240 4% 22%;
     --ring: 160 84% 39%;
     --success: 160 84% 39%;
-    --success-foreground: 158 64% 78%;
+    --success-foreground: 160 60% 75%;
   }
 }
 
@@ -70,7 +84,7 @@
   }
   :focus-visible {
     outline: 2px solid hsl(var(--ring));
-    outline-offset: 3px;
+    outline-offset: 2px;
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -82,7 +96,8 @@
   ::selection {
     background: hsl(var(--primary) / 0.18);
   }
-  h1, h2, h3 {
-    @apply font-display;
-  }
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
 }

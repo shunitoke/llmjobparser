@@ -14,27 +14,30 @@ export function CandidateCard({ item }: CandidateCardProps) {
   const sourceBadgeClass = getJobSourceBadgeClass(item);
 
   return (
-    <article className="rounded-md border border-input/60 bg-background/50 p-3">
+    <article className="rounded-lg border border-border/60 bg-background/50 p-3 transition-colors hover:bg-accent/30">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className={sourceBadgeClass}>
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-medium leading-relaxed ${sourceBadgeClass}`}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-current opacity-60" />
               {source}
-            </Badge>
-            {item.selected && <Badge variant="success">Отобрана</Badge>}
+            </span>
+            {item.selected && <Badge variant="success" className="text-[10px]">Отобрана</Badge>}
           </div>
-          <h4 className="min-w-0 break-words font-medium leading-snug">
+          <h4 className="min-w-0 break-words text-sm font-medium leading-snug">
             <a
               href={item.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 hover:underline"
+              className="inline-flex items-center gap-1 text-foreground transition-colors hover:text-primary"
             >
               <span className="line-clamp-2">{item.title || 'Без названия'}</span>
-              <ExternalLink className="h-4 w-4 shrink-0 opacity-50" />
+              <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
             </a>
           </h4>
-          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             {relativeDate && (
               <span className="inline-flex items-center gap-1">
                 <Calendar className="h-3 w-3" aria-hidden="true" />

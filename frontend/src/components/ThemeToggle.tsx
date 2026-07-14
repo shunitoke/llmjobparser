@@ -12,11 +12,11 @@ export function ThemeToggle({ isDark, onToggle }: ThemeToggleProps) {
       variant="outline"
       size="icon"
       onClick={onToggle}
-      className="h-11 w-11 rounded-md"
+      className="h-10 w-10 rounded-lg"
       aria-label={isDark ? 'Включить светлую тему' : 'Включить тёмную тему'}
       title={isDark ? 'Светлая тема' : 'Тёмная тема'}
     >
-      {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      {isDark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
     </Button>
   );
 }
