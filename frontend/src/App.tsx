@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Github, Send, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -201,16 +201,37 @@ function App() {
     status && status.status !== 'completed' && status.status !== 'cancelled' && status.status !== 'failed'
   );
 
-  const ModalOverlay = ({ children }: { children: React.ReactNode }) => (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-12 backdrop-blur-sm animate-scale-in"
-      role="dialog"
-      aria-modal="true"
-      onClick={() => setShowKeySettings(false)}
-    >
-      {children}
-    </div>
-  );
+  const ModalOverlay = ({ children, onClose }: { children: React.ReactNode; onClose?: () => void }) => {
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      const el = ref.current;
+      if (!el) return;
+      el.focus();
+    }, []);
+
+    useEffect(() => {
+      if (!onClose) return;
+      const handler = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') onClose();
+      };
+      document.addEventListener('keydown', handler);
+      return () => document.removeEventListener('keydown', handler);
+    }, [onClose]);
+
+    return (
+      <div
+        ref={ref}
+        tabIndex={-1}
+        className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-12 backdrop-blur-sm animate-scale-in"
+        role="dialog"
+        aria-modal="true"
+        onClick={() => onClose?.()}
+      >
+        {children}
+      </div>
+    );
+  };
 
   if (keyConfigured === null) {
     return (
@@ -271,7 +292,7 @@ function App() {
       </header>
 
       {showKeySettings && (
-        <ModalOverlay>
+        <ModalOverlay onClose={() => setShowKeySettings(false)}>
           <Card className="relative w-full max-w-md animate-scale-in shadow-xl" onClick={(e) => e.stopPropagation()}>
             <Button
               variant="ghost"
@@ -300,7 +321,7 @@ function App() {
       )}
 
       {showTelegramSettings && (
-        <ModalOverlay>
+        <ModalOverlay onClose={() => setShowTelegramSettings(false)}>
           <Card className="relative w-full max-w-md animate-scale-in shadow-xl" onClick={(e) => e.stopPropagation()}>
             <Button
               variant="ghost"
@@ -413,20 +434,17 @@ function App() {
       </main>
 
       <footer className="border-t border-border/60 py-5">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <p className="text-xs text-muted-foreground">
-            vibejob &mdash; поиск работы через нейросеть
-          </p>
+        <div className="mx-auto flex max-w-6xl items-center justify-end px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <a href="https://t.me/fastmvpbot" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors" title="Есть вопрос, идея или баг?">
+            <a href="https://t.me/fastmvpbot" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors" title="Telegram">
               <Send className="h-3 w-3" />
-              Связаться
+              @fastmvpbot
             </a>
-            <a href="https://github.com/shunitoke/llmjobparser" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors" title="Исходники, issues, фичи">
+            <a href="https://github.com/shunitoke/llmjobparser" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors" title="GitHub">
               <Github className="h-3 w-3" />
               GitHub
             </a>
-            <a href="https://web.tribute.tg/d/NfV" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors" title="Если проект зашёл — задонатить на кофе">
+            <a href="https://web.tribute.tg/d/NfV" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors" title="Поблагодарить">
               💸 Поблагодарить
             </a>
           </div>
