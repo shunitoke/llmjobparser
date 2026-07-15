@@ -434,17 +434,20 @@ function App() {
       </main>
 
       <footer className="border-t border-border/60 py-5">
-        <div className="mx-auto flex max-w-6xl items-center justify-end px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <p className="text-xs text-muted-foreground">
+            vibejob &mdash; умный поиск работы
+          </p>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <a href="https://t.me/fastmvpbot" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors" title="Telegram">
+            <a href="https://t.me/fastmvpbot" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
               <Send className="h-3 w-3" />
               @fastmvpbot
             </a>
-            <a href="https://github.com/shunitoke/llmjobparser" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors" title="GitHub">
+            <a href="https://github.com/shunitoke/llmjobparser" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
               <Github className="h-3 w-3" />
               GitHub
             </a>
-            <a href="https://web.tribute.tg/d/NfV" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors" title="Поблагодарить">
+            <a href="https://web.tribute.tg/d/NfV" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
               💸 Поблагодарить
             </a>
           </div>
