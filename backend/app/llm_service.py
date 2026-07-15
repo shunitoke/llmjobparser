@@ -232,6 +232,8 @@ class LLMService:
             while True:
                 try:
                     headers = await self._headers()
+                    if is_ultra:
+                        headers["User-Agent"] = "vibejob/1.0"
                     response = await self._gigachat_client.post(
                         url,
                         headers=headers,
@@ -266,7 +268,7 @@ class LLMService:
                             except Exception:
                                 body_text = e.response.text or ""
                             body_lower = body_text.lower()
-                            if status == 402 or status == 404 or any(kw in body_lower for kw in ["token_limit", "quota", "insufficient", "лимит", "баланс", "tokens", "исчерпа"]):
+                            if status in (402, 404) or any(kw in body_lower for kw in ["token_limit", "quota", "insufficient", "лимит", "баланс", "tokens", "исчерпа"]):
                                 if self._rotate_gigachat_model():
                                     attempt += 1
                                     await asyncio.sleep(1.0)
