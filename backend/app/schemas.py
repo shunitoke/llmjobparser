@@ -81,3 +81,4 @@ class SearchStatusResponse(BaseModel):
     selected_count: int = 0
     scraped_count: int = 0
     generated_queries: Optional[str] = None
+    current_model: str = ""

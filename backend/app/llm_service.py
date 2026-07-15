@@ -15,6 +15,12 @@ from app.settings_store import get_llm_config
 
 logger = logging.getLogger(__name__)
 
+_current_gigachat_model: str = ""
+
+
+def get_current_gigachat_model() -> str:
+    return _current_gigachat_model
+
 
 def sanitize_description(text: str) -> str:
     text = re.sub(r'!\[.*?\]\(.*?\)', '', text)
@@ -32,6 +38,7 @@ class LLMService:
     ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1"
     DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
     GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
+    GIGACHAT_MODELS = ["GigaChat", "GigaChat-Pro", "GigaChat-Max"]
 
     def __init__(self):
         self.settings = get_settings()
@@ -46,6 +53,7 @@ class LLMService:
         limits = httpx.Limits(max_connections=20, max_keepalive_connections=10)
         self._client = httpx.AsyncClient(timeout=timeout, limits=limits)
         self._gigachat_client = httpx.AsyncClient(timeout=timeout, limits=limits, verify=False)
+        self._gigachat_model_idx = 0
 
     async def aclose(self) -> None:
         await self._client.aclose()
@@ -63,7 +71,6 @@ class LLMService:
         mg = self._key_manager.get_model()
         if mg:
             return mg
-        # fallback to env config based on provider
         provider = self._get_provider()
         if provider == "openai":
             return self.settings.openai_model or "gpt-4o-mini"
@@ -75,7 +82,21 @@ class LLMService:
             return self.settings.deepseek_model or "deepseek-v4-flash"
         if provider == "gemini":
             return self.settings.gemini_model or "gemini-2.0-flash"
-        return self.settings.gigachat_model or "GigaChat"
+        idx = min(self._gigachat_model_idx, len(self.GIGACHAT_MODELS) - 1)
+        return self.GIGACHAT_MODELS[idx]
+
+    def reset_gigachat_model(self) -> None:
+        self._gigachat_model_idx = 0
+
+    def _rotate_gigachat_model(self) -> bool:
+        global _current_gigachat_model
+        if self._gigachat_model_idx >= len(self.GIGACHAT_MODELS) - 1:
+            return False
+        self._gigachat_model_idx += 1
+        model = self.GIGACHAT_MODELS[self._gigachat_model_idx]
+        _current_gigachat_model = model
+        logger.warning("Rotated GigaChat model to %s", model)
+        return True
 
     # ── Resume file upload (GigaChat only) ──
 
@@ -200,6 +221,8 @@ class LLMService:
             raise RuntimeError(f"Unknown LLM provider: {provider}")
 
     async def _call_gigachat(self, messages: List[Dict], temperature: float) -> str:
+        global _current_gigachat_model
+        _current_gigachat_model = self._get_model()
         max_retries = max(0, int(self.settings.gigachat_max_retries or 0))
         attempt = 0
         async with self._semaphore:
@@ -232,6 +255,20 @@ class LLMService:
                             attempt += 1
                             await asyncio.sleep(retry_after)
                             continue
+                        # rotate model on quota/token exhaustion (402 or 403 with keywords)
+                        if status in (402, 403, 400, 429):
+                            body_text = ""
+                            try:
+                                body_text = str(e.response.json())
+                            except Exception:
+                                body_text = e.response.text or ""
+                            body_lower = body_text.lower()
+                            if status == 402 or any(kw in body_lower for kw in ["token_limit", "quota", "insufficient", "лимит", "баланс", "tokens", "исчерпа"]):
+                                if self._rotate_gigachat_model():
+                                    attempt += 1
+                                    await asyncio.sleep(1.0)
+                                    continue
+                                logger.error("All GigaChat models exhausted: %s", body_text[:200])
                         raise
                     data = response.json()
                     return data["choices"][0]["message"]["content"]

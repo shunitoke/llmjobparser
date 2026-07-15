@@ -33,6 +33,7 @@ from app.resume_parser import ResumeParser
 from app.search_service import run_search
 from app.settings_store import get_telegram_channels, set_telegram_channels, get_llm_config, set_llm_config
 from app.key_manager import key_manager as _key_manager
+from app.llm_service import get_current_gigachat_model
 
 app = FastAPI(title="vibejob")
 
@@ -385,6 +386,7 @@ async def get_search_status(session_id: int, db: AsyncSession = Depends(get_db))
         selected_count=session.selected_count or 0,
         scraped_count=session.scraped_count or 0,
         generated_queries=session.generated_queries,
+        current_model=get_current_gigachat_model(),
     )
 
 

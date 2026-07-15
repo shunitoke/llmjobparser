@@ -31,6 +31,9 @@ export function StatusPanel({ status }: StatusPanelProps) {
             {status.current_source && (
               <p className="text-xs text-muted-foreground">Источник: {status.current_source}</p>
             )}
+            {status.current_model && status.current_model !== 'GigaChat' && (
+              <p className="text-xs text-muted-foreground">Модель: {status.current_model}</p>
+            )}
           </div>
         </div>
 

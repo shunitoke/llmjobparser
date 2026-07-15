@@ -36,6 +36,7 @@ export interface SearchStatus {
   current_source: string;
   candidates_count: number;
   selected_count: number;
+  current_model: string;
 }
 
 export interface CandidateJob {
