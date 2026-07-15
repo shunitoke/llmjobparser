@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <video src="https://github.com/user-attachments/assets/07c5dbe9-0982-4028-81ae-a13fe5714a0f" autoplay loop muted playsinline width="720" />
+  <video src="https://github.com/user-attachments/assets/07c5dbe9-0982-4028-81ae-a13fe5714a0f" autoplay loop muted playsinline width="720" style="border: 0; border-radius: 12px;" />
 </p>
 
 ---
