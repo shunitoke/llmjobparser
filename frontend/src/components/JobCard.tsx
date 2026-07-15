@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Building2, Briefcase, Calendar, ChevronDown, ExternalLink, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatRelativeDate } from '@/lib/dates';
@@ -11,10 +11,22 @@ interface JobCardProps {
 
 export function JobCard({ job }: JobCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [animHeight, setAnimHeight] = useState(0);
+  const extraRef = useRef<HTMLDivElement>(null);
   const isMatch = job.is_match === true;
   const source = getJobSourceLabel(job);
   const sourceBadgeClass = getJobSourceBadgeClass(job);
   const relativeDate = formatRelativeDate(job.published_at);
+  const hasExtra = Boolean(job.match_reason || job.experience || (job.description && expanded));
+
+  useEffect(() => {
+    if (hasExtra && extraRef.current) {
+      const h = extraRef.current.scrollHeight;
+      setAnimHeight(h);
+    } else {
+      setAnimHeight(0);
+    }
+  }, [hasExtra, job.match_reason, job.experience, job.description, expanded]);
 
   return (
     <article
@@ -74,43 +86,50 @@ export function JobCard({ job }: JobCardProps) {
           </div>
         </div>
 
-        {job.match_reason && (
-          <p className="mt-3 text-sm text-foreground/80">
-            <span className="font-medium text-foreground">Почему подходит: </span>
-            {job.match_reason}
-          </p>
-        )}
-
-        {job.experience && (
-          <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-            <Briefcase className="h-3 w-3" aria-hidden="true" />
-            {job.experience}
-          </div>
-        )}
-
-        {job.description && (
-          <div className="mt-3">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setExpanded((prev) => !prev)}
-              aria-expanded={expanded}
-              className="h-auto px-0 py-1 text-xs text-muted-foreground hover:text-foreground"
-            >
-              {expanded ? 'Скрыть описание' : 'Показать описание'}
-              <ChevronDown
-                className={`ml-1 h-3.5 w-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`}
-                aria-hidden="true"
-              />
-            </Button>
-            {expanded && (
-              <p className="mt-2 max-h-60 overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-                {job.description}
+        <div
+          className="transition-all duration-300 ease-out overflow-hidden"
+          style={{ maxHeight: animHeight > 0 ? `${animHeight}px` : '0px', opacity: animHeight > 0 ? 1 : 0 }}
+        >
+          <div ref={extraRef}>
+            {job.match_reason && (
+              <p className="mt-3 text-sm text-foreground/80">
+                <span className="font-medium text-foreground">Почему подходит: </span>
+                {job.match_reason}
               </p>
             )}
+
+            {job.experience && (
+              <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+                <Briefcase className="h-3 w-3" aria-hidden="true" />
+                {job.experience}
+              </div>
+            )}
+
+            {job.description && (
+              <div className="mt-3">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setExpanded((prev) => !prev)}
+                  aria-expanded={expanded}
+                  className="h-auto px-0 py-1 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  {expanded ? 'Скрыть описание' : 'Показать описание'}
+                  <ChevronDown
+                    className={`ml-1 h-3.5 w-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                    aria-hidden="true"
+                  />
+                </Button>
+                {expanded && (
+                  <p className="mt-2 max-h-60 overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                    {job.description}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </article>
   );
