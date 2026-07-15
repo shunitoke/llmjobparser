@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Building2, Calendar, ExternalLink, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatRelativeDate } from '@/lib/dates';
@@ -8,7 +9,7 @@ interface CandidateCardProps {
   item: CandidateJob;
 }
 
-export function CandidateCard({ item }: CandidateCardProps) {
+export const CandidateCard = memo(function CandidateCard({ item }: CandidateCardProps) {
   const relativeDate = formatRelativeDate(item.created_at);
   const source = getJobSource(item);
   const sourceBadgeClass = getJobSourceBadgeClass(item);
@@ -62,4 +63,4 @@ export function CandidateCard({ item }: CandidateCardProps) {
       </div>
     </article>
   );
-}
+});

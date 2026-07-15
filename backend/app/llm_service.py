@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 import time
 import uuid
 from datetime import datetime
@@ -13,6 +14,14 @@ from app.key_manager import key_manager as _global_key_manager
 from app.settings_store import get_llm_config
 
 logger = logging.getLogger(__name__)
+
+
+def sanitize_description(text: str) -> str:
+    text = re.sub(r'!\[.*?\]\(.*?\)', '', text)
+    text = re.sub(r'<img[^>]*>', '', text)
+    text = re.sub(r'ERROR: Cannot read.*?\.(\s|$)', '', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
 
 
 class LLMService:
@@ -494,6 +503,7 @@ Rules:
 
     async def analyze_vacancy(self, user_prompt: str, vacancy: Dict, lang: str = "ru") -> Tuple[bool, str]:
         """Analyze if a vacancy matches user's requirements."""
+        desc = sanitize_description(vacancy.get('description', ''))
         if lang == "en":
             vacancy_text = f"""
 Title: {vacancy.get('title', '')}
@@ -504,7 +514,7 @@ Experience: {vacancy.get('experience', '')}
 Employment type: {vacancy.get('employment_type', '')}
 
 Description:
-{vacancy.get('description', '')[:3000]}
+{desc[:3000]}
 """
             system_content = """You are a job analysis expert. Evaluate if the vacancy matches the user's requirements.
 
@@ -522,7 +532,7 @@ Respond STRICTLY in JSON format:
 Тип занятости: {vacancy.get('employment_type', '')}
 
 Описание:
-{vacancy.get('description', '')[:3000]}
+{desc[:3000]}
 """
             system_content = """Ты эксперт по анализу вакансий. Оцени, подходит ли вакансия под запрос пользователя.
 
