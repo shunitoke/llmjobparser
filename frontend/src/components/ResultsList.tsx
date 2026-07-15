@@ -122,7 +122,7 @@ export function ResultsList({
               <p className="text-sm text-muted-foreground">Нет вакансий в этой категории.</p>
             ) : (
               visibleJobs.map((job, i) => (
-                <div key={job.id} className="animate-fade-in" style={{ animationDelay: `${i * 30}ms`, animationFillMode: 'both' }}>
+                <div key={job.id} className="animate-pop-in" style={{ animationDelay: `${i * 20}ms` }}>
                   <JobCard job={job} />
                 </div>
               ))

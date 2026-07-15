@@ -42,6 +42,7 @@ function App() {
   const [candidateOffset, setCandidateOffset] = useState(0);
   const [candidateLimit] = useState(50);
   const [candidateSelectedOnly, setCandidateSelectedOnly] = useState<boolean | null>(null);
+  const candidateFilterRef = useRef<boolean | null>(null);
   const [candidateLoading, setCandidateLoading] = useState(false);
   const [showCandidatesPanel, setShowCandidatesPanel] = useState(false);
   const [showSourceSheet, setShowSourceSheet] = useState(false);
@@ -101,6 +102,7 @@ function App() {
   const loadCandidates = useCallback(
     async (sessionId: number, offset: number, selectedOnly: boolean | null) => {
       setCandidateLoading(true);
+      candidateFilterRef.current = selectedOnly;
       try {
         const res = await getCandidates(sessionId, offset, candidateLimit, selectedOnly, null, 'created_at');
         setCandidateItems(res.items);
@@ -123,7 +125,7 @@ function App() {
         const newStatus = await getSearchStatus(sessionId);
         setStatus(newStatus);
         if (newStatus.status === 'collecting_candidates' || newStatus.status === 'selecting') {
-          if (candidateOffset === 0) loadCandidates(sessionId, candidateOffset, candidateSelectedOnly);
+          if (candidateOffset === 0) loadCandidates(sessionId, candidateOffset, candidateFilterRef.current);
         }
         if (newStatus.status === 'completed') {
           const session = await getSearchSession(sessionId);

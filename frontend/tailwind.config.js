@@ -65,6 +65,10 @@ module.exports = {
           from: { opacity: 0, transform: "translateY(4px)" },
           to: { opacity: 1, transform: "translateY(0)" },
         },
+        "pop-in": {
+          from: { opacity: 0 },
+          to: { opacity: 1 },
+        },
         "fade-in-up": {
           from: { opacity: 0, transform: "translateY(12px)" },
           to: { opacity: 1, transform: "translateY(0)" },
@@ -85,6 +89,7 @@ module.exports = {
       animation: {
         "fade-in": "fade-in 0.3s ease-out",
         "fade-in-up": "fade-in-up 0.4s ease-out",
+        "pop-in": "pop-in 0.2s ease-out",
         "scale-in": "scale-in 0.2s ease-out",
         "slide-in-right": "slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
         "slide-out-right": "slide-out-right 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
