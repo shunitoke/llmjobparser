@@ -38,7 +38,7 @@ class LLMService:
     ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1"
     DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
     GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
-    GIGACHAT_MODELS = ["GigaChat", "GigaChat-Pro", "GigaChat-Max"]
+    GIGACHAT_MODELS = ["GigaChat", "GigaChat-Pro", "GigaChat-Max", "GigaChat-Ultra"]
 
     def __init__(self):
         self.settings = get_settings()
@@ -256,14 +256,14 @@ class LLMService:
                             await asyncio.sleep(retry_after)
                             continue
                         # rotate model on quota/token exhaustion (402 or 403 with keywords)
-                        if status in (402, 403, 400, 429):
+                        if status in (402, 403, 400, 404, 429):
                             body_text = ""
                             try:
                                 body_text = str(e.response.json())
                             except Exception:
                                 body_text = e.response.text or ""
                             body_lower = body_text.lower()
-                            if status == 402 or any(kw in body_lower for kw in ["token_limit", "quota", "insufficient", "лимит", "баланс", "tokens", "исчерпа"]):
+                            if status == 402 or status == 404 or any(kw in body_lower for kw in ["token_limit", "quota", "insufficient", "лимит", "баланс", "tokens", "исчерпа"]):
                                 if self._rotate_gigachat_model():
                                     attempt += 1
                                     await asyncio.sleep(1.0)
