@@ -41,9 +41,8 @@ function App() {
   const [candidateTotal, setCandidateTotal] = useState(0);
   const [candidateOffset, setCandidateOffset] = useState(0);
   const [candidateLimit] = useState(50);
-  const [candidateSelectedOnly, setCandidateSelectedOnly] = useState<boolean | null>(null);
-  const candidateFilterRef = useRef<boolean | null>(null);
   const [candidateLoading, setCandidateLoading] = useState(false);
+  const candidateIdsRef = useRef<string>('');
   const [showCandidatesPanel, setShowCandidatesPanel] = useState(false);
   const [showSourceSheet, setShowSourceSheet] = useState(false);
   const [keyConfigured, setKeyConfigured] = useState<boolean | null>(null);
@@ -100,11 +99,13 @@ function App() {
   }, []);
 
   const loadCandidates = useCallback(
-    async (sessionId: number, offset: number, selectedOnly: boolean | null) => {
+    async (sessionId: number, offset: number) => {
       setCandidateLoading(true);
-      candidateFilterRef.current = selectedOnly;
       try {
-        const res = await getCandidates(sessionId, offset, candidateLimit, selectedOnly, null, 'created_at');
+        const res = await getCandidates(sessionId, offset, candidateLimit, null, null, 'created_at');
+        const ids = res.items.map((i: { id: number }) => i.id).join(',');
+        if (ids === candidateIdsRef.current && offset === candidateOffset) return;
+        candidateIdsRef.current = ids;
         setCandidateItems(res.items);
         setCandidateTotal(res.total);
         setCandidateOffset(res.offset);
@@ -116,7 +117,7 @@ function App() {
         setCandidateLoading(false);
       }
     },
-    [candidateLimit]
+    [candidateLimit, candidateOffset]
   );
 
   const pollStatus = useCallback(
@@ -125,7 +126,7 @@ function App() {
         const newStatus = await getSearchStatus(sessionId);
         setStatus(newStatus);
         if (newStatus.status === 'collecting_candidates' || newStatus.status === 'selecting') {
-          if (candidateOffset === 0) loadCandidates(sessionId, candidateOffset, candidateFilterRef.current);
+          if (candidateOffset === 0) loadCandidates(sessionId, candidateOffset);
         }
         if (newStatus.status === 'completed') {
           const session = await getSearchSession(sessionId);
@@ -142,7 +143,7 @@ function App() {
         setIsLoading(false);
       }
     },
-    [candidateOffset, candidateSelectedOnly, loadCandidates]
+    [candidateOffset, loadCandidates]
   );
 
   const handleSearch = async () => {
@@ -155,7 +156,7 @@ function App() {
     setCandidateItems([]);
     setCandidateTotal(0);
     setCandidateOffset(0);
-    setCandidateSelectedOnly(null);
+    candidateIdsRef.current = '';
     setSort('relevance');
     setSelectedTab('matched');
     try {
@@ -163,7 +164,7 @@ function App() {
       const session = await createSearch(prompt, cityToSend, selectedCategories, searchMode);
       setCurrentSession(session);
       setShowCandidatesPanel(true);
-      loadCandidates(session.id, 0, null);
+      loadCandidates(session.id, 0);
       pollStatus(session.id);
     } catch (err) {
       setError('Ошибка при создании поиска');
@@ -424,12 +425,10 @@ function App() {
               total={candidateTotal}
               offset={candidateOffset}
               limit={candidateLimit}
-              selectedOnly={candidateSelectedOnly}
               loading={candidateLoading}
               isVisible={showCandidatesPanel}
               onVisibilityChange={() => setShowCandidatesPanel((prev) => !prev)}
-              onSelectedOnlyChange={setCandidateSelectedOnly}
-              onLoad={(offset, selectedOnly) => loadCandidates(activeSessionId, offset, selectedOnly)}
+              onLoad={(offset) => loadCandidates(activeSessionId, offset)}
             />
           </div>
         )}

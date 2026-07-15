@@ -1,4 +1,3 @@
-import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CandidateJob } from '../types';
 import { CandidateCard } from './CandidateCard';
@@ -8,12 +7,10 @@ interface CandidateListProps {
   total: number;
   offset: number;
   limit: number;
-  selectedOnly: boolean | null;
   loading: boolean;
   isVisible: boolean;
   onVisibilityChange: () => void;
-  onSelectedOnlyChange: (selectedOnly: boolean | null) => void;
-  onLoad: (offset: number, selectedOnly: boolean | null) => void;
+  onLoad: (offset: number) => void;
 }
 
 export function CandidateList({
@@ -21,11 +18,9 @@ export function CandidateList({
   total,
   offset,
   limit,
-  selectedOnly,
   loading,
   isVisible,
   onVisibilityChange,
-  onSelectedOnlyChange,
   onLoad,
 }: CandidateListProps) {
   return (
@@ -56,30 +51,6 @@ export function CandidateList({
         </span>
       </summary>
       <div className="border-t p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-muted-foreground">Фильтр:</span>
-          <div className="inline-flex overflow-hidden rounded-lg border bg-card p-0.5">
-            <button
-              type="button"
-              onClick={() => { onSelectedOnlyChange(null); onLoad(0, null); }}
-              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
-                selectedOnly === null ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Все
-            </button>
-            <button
-              type="button"
-              onClick={() => { onSelectedOnlyChange(true); onLoad(0, true); }}
-              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
-                selectedOnly === true ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Отобранные
-            </button>
-          </div>
-        </div>
-
         <div className="mt-4 space-y-2">
           <div className="flex items-center justify-between gap-2">
             <div className="text-xs text-muted-foreground">
@@ -90,14 +61,11 @@ export function CandidateList({
               )}
             </div>
             <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => onLoad(offset, selectedOnly)} disabled={loading}>
-                {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Обновить'}
-              </Button>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => onLoad(Math.max(0, offset - limit), selectedOnly)}
+                onClick={() => onLoad(Math.max(0, offset - limit))}
                 disabled={loading || offset <= 0}
               >
                 Назад
@@ -106,7 +74,7 @@ export function CandidateList({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => onLoad(offset + limit, selectedOnly)}
+                onClick={() => onLoad(offset + limit)}
                 disabled={loading || offset + limit >= total}
               >
                 Вперёд
