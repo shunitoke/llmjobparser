@@ -41,9 +41,9 @@ function App() {
   const [candidateTotal, setCandidateTotal] = useState(0);
   const [candidateOffset, setCandidateOffset] = useState(0);
   const [candidateLimit] = useState(50);
-  const [candidateLoading, setCandidateLoading] = useState(false);
   const candidateIdsRef = useRef<string>('');
   const [showCandidatesPanel, setShowCandidatesPanel] = useState(false);
+  const showCandidatesAutoRef = useRef(false);
   const [showSourceSheet, setShowSourceSheet] = useState(false);
   const [keyConfigured, setKeyConfigured] = useState<boolean | null>(null);
   const [showKeySettings, setShowKeySettings] = useState(false);
@@ -100,7 +100,6 @@ function App() {
 
   const loadCandidates = useCallback(
     async (sessionId: number, offset: number) => {
-      setCandidateLoading(true);
       try {
         const res = await getCandidates(sessionId, offset, candidateLimit, null, null, 'created_at');
         const ids = res.items.map((i: { id: number }) => i.id).join(',');
@@ -113,8 +112,6 @@ function App() {
         setCandidateItems([]);
         setCandidateTotal(0);
         setCandidateOffset(0);
-      } finally {
-        setCandidateLoading(false);
       }
     },
     [candidateLimit, candidateOffset]
@@ -125,6 +122,10 @@ function App() {
       try {
         const newStatus = await getSearchStatus(sessionId);
         setStatus(newStatus);
+        if (!showCandidatesAutoRef.current && newStatus.status !== 'generating_queries' && newStatus.status !== 'pending') {
+          showCandidatesAutoRef.current = true;
+          setShowCandidatesPanel(true);
+        }
         if (newStatus.status === 'collecting_candidates' || newStatus.status === 'selecting') {
           if (candidateOffset === 0) loadCandidates(sessionId, candidateOffset);
         }
@@ -157,13 +158,13 @@ function App() {
     setCandidateTotal(0);
     setCandidateOffset(0);
     candidateIdsRef.current = '';
+    showCandidatesAutoRef.current = false;
     setSort('relevance');
     setSelectedTab('matched');
     try {
       const cityToSend = cityPreset === 'Любой город' ? '' : cityPreset;
       const session = await createSearch(prompt, cityToSend, selectedCategories, searchMode);
       setCurrentSession(session);
-      setShowCandidatesPanel(true);
       loadCandidates(session.id, 0);
       pollStatus(session.id);
     } catch (err) {
@@ -425,7 +426,6 @@ function App() {
               total={candidateTotal}
               offset={candidateOffset}
               limit={candidateLimit}
-              loading={candidateLoading}
               isVisible={showCandidatesPanel}
               onVisibilityChange={() => setShowCandidatesPanel((prev) => !prev)}
               onLoad={(offset) => loadCandidates(activeSessionId, offset)}
