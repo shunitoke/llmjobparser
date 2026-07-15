@@ -24,6 +24,38 @@ type SearchMode = 'ru' | 'global' | 'telegram';
 const THEME_COLOR_LIGHT = '#fafafa';
 const THEME_COLOR_DARK = '#09090b';
 
+function ModalOverlay({ children, onClose }: { children: React.ReactNode; onClose?: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!onClose) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-12 backdrop-blur-sm animate-scale-in"
+      role="dialog"
+      aria-modal="true"
+      onClick={() => onClose?.()}
+    >
+      {children}
+    </div>
+  );
+}
+
 function App() {
   const [prompt, setPrompt] = useState('');
   const [cityPreset, setCityPreset] = useState('Любой город');
@@ -205,37 +237,6 @@ function App() {
     status && status.status !== 'completed' && status.status !== 'cancelled' && status.status !== 'failed'
   );
 
-  const ModalOverlay = ({ children, onClose }: { children: React.ReactNode; onClose?: () => void }) => {
-    const ref = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-      const el = ref.current;
-      if (!el) return;
-      el.focus();
-    }, []);
-
-    useEffect(() => {
-      if (!onClose) return;
-      const handler = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') onClose();
-      };
-      document.addEventListener('keydown', handler);
-      return () => document.removeEventListener('keydown', handler);
-    }, [onClose]);
-
-    return (
-      <div
-        ref={ref}
-        tabIndex={-1}
-        className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-12 backdrop-blur-sm animate-scale-in"
-        role="dialog"
-        aria-modal="true"
-        onClick={() => onClose?.()}
-      >
-        {children}
-      </div>
-    );
-  };
 
   if (keyConfigured === null) {
     return (
