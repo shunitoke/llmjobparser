@@ -55,6 +55,40 @@ class LLMService:
         self._client = httpx.AsyncClient(timeout=timeout, limits=limits)
         self._gigachat_client = httpx.AsyncClient(timeout=timeout, limits=limits, verify=False)
         self._gigachat_model_idx = 0
+        self._models_discovered = False
+
+    async def _discover_gigachat_models(self) -> None:
+        if self._models_discovered:
+            return
+        self._models_discovered = True
+        discovered: List[str] = []
+        urls = [
+            "https://gigachat.devices.sberbank.ru/api/v1/models",
+            "https://api.giga.chat/v1/models",
+        ]
+        for url in urls:
+            try:
+                headers = await self._headers()
+                headers["User-Agent"] = "vibejob/1.0"
+                resp = await self._gigachat_client.get(url, headers=headers)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    for m in data.get("data", []):
+                        mid = m.get("id", "")
+                        if m.get("type") == "chat" and mid:
+                            discovered.append(mid)
+            except Exception as exc:
+                logger.debug("Failed to discover models from %s: %s", url, exc)
+        if not discovered:
+            return
+        seen = set()
+        merged: List[str] = []
+        for m in self.GIGACHAT_MODELS + discovered:
+            if m not in seen:
+                seen.add(m)
+                merged.append(m)
+        logger.info("GigaChat models discovered: %s (from API: %s)", merged, discovered)
+        self.GIGACHAT_MODELS = merged
 
     async def aclose(self) -> None:
         await self._client.aclose()
@@ -223,6 +257,7 @@ class LLMService:
 
     async def _call_gigachat(self, messages: List[Dict], temperature: float) -> str:
         global _current_gigachat_model
+        await self._discover_gigachat_models()
         _current_gigachat_model = self._get_model()
         is_ultra = "Ultra" in _current_gigachat_model
         url = self.GIGACHAT_ULTRA_CHAT_URL if is_ultra else self.GIGACHAT_CHAT_URL
