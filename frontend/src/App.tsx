@@ -418,15 +418,15 @@ function App() {
             vibejob &mdash; поиск работы через нейросеть
           </p>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <a href="https://t.me/fastmvpbot" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors" title="Telegram">
+            <a href="https://t.me/fastmvpbot" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors" title="Есть вопрос, идея или баг?">
               <Send className="h-3 w-3" />
-              @fastmvpbot
+              Связаться
             </a>
-            <a href="https://github.com/shunitoke/llmjobparser" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors" title="GitHub">
+            <a href="https://github.com/shunitoke/llmjobparser" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors" title="Исходники, issues, фичи">
               <Github className="h-3 w-3" />
               GitHub
             </a>
-            <a href="https://web.tribute.tg/d/NfV" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors" title="Поблагодарить">
+            <a href="https://web.tribute.tg/d/NfV" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors" title="Если проект зашёл — задонатить на кофе">
               💸 Поблагодарить
             </a>
           </div>
