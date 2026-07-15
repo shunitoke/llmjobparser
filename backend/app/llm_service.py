@@ -33,12 +33,13 @@ def sanitize_description(text: str) -> str:
 class LLMService:
     GIGACHAT_OAUTH_URL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
     GIGACHAT_CHAT_URL = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
+    GIGACHAT_ULTRA_CHAT_URL = "https://api.giga.chat/v1/chat/completions"
     OPENAI_BASE_URL = "https://api.openai.com/v1"
     OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
     ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1"
     DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
     GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
-    GIGACHAT_MODELS = ["GigaChat", "GigaChat-Pro", "GigaChat-Max", "GigaChat-Ultra"]
+    GIGACHAT_MODELS = ["GigaChat", "GigaChat-Pro", "GigaChat-Max", "GigaChat-3-Ultra"]
 
     def __init__(self):
         self.settings = get_settings()
@@ -223,6 +224,8 @@ class LLMService:
     async def _call_gigachat(self, messages: List[Dict], temperature: float) -> str:
         global _current_gigachat_model
         _current_gigachat_model = self._get_model()
+        is_ultra = "Ultra" in _current_gigachat_model
+        url = self.GIGACHAT_ULTRA_CHAT_URL if is_ultra else self.GIGACHAT_CHAT_URL
         max_retries = max(0, int(self.settings.gigachat_max_retries or 0))
         attempt = 0
         async with self._semaphore:
@@ -230,7 +233,7 @@ class LLMService:
                 try:
                     headers = await self._headers()
                     response = await self._gigachat_client.post(
-                        self.GIGACHAT_CHAT_URL,
+                        url,
                         headers=headers,
                         json={
                             "model": self._get_model(),
@@ -268,7 +271,8 @@ class LLMService:
                                     attempt += 1
                                     await asyncio.sleep(1.0)
                                     continue
-                                logger.error("All GigaChat models exhausted: %s", body_text[:200])
+                                logger.error("All GigaChat models exhausted (last: %s, status=%s): %s",
+                                             self.GIGACHAT_MODELS[self._gigachat_model_idx], status, body_text[:200])
                         raise
                     data = response.json()
                     return data["choices"][0]["message"]["content"]
