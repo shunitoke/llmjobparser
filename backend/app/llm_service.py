@@ -32,8 +32,7 @@ def sanitize_description(text: str) -> str:
 
 class LLMService:
     GIGACHAT_OAUTH_URL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
-    GIGACHAT_CHAT_URL = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
-    GIGACHAT_ULTRA_CHAT_URL = "https://api.giga.chat/v1/chat/completions"
+    GIGACHAT_CHAT_URL = "https://api.giga.chat/v1/chat/completions"
     OPENAI_BASE_URL = "https://api.openai.com/v1"
     OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
     ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1"
@@ -55,40 +54,6 @@ class LLMService:
         self._client = httpx.AsyncClient(timeout=timeout, limits=limits)
         self._gigachat_client = httpx.AsyncClient(timeout=timeout, limits=limits, verify=False)
         self._gigachat_model_idx = 0
-        self._models_discovered = False
-
-    async def _discover_gigachat_models(self) -> None:
-        if self._models_discovered:
-            return
-        self._models_discovered = True
-        discovered: List[str] = []
-        urls = [
-            "https://gigachat.devices.sberbank.ru/api/v1/models",
-            "https://api.giga.chat/v1/models",
-        ]
-        for url in urls:
-            try:
-                headers = await self._headers()
-                headers["User-Agent"] = "vibejob/1.0"
-                resp = await self._gigachat_client.get(url, headers=headers)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    for m in data.get("data", []):
-                        mid = m.get("id", "")
-                        if m.get("type") == "chat" and mid:
-                            discovered.append(mid)
-            except Exception as exc:
-                logger.debug("Failed to discover models from %s: %s", url, exc)
-        if not discovered:
-            return
-        seen = set()
-        merged: List[str] = []
-        for m in self.GIGACHAT_MODELS + discovered:
-            if m not in seen:
-                seen.add(m)
-                merged.append(m)
-        logger.info("GigaChat models discovered: %s (from API: %s)", merged, discovered)
-        self.GIGACHAT_MODELS = merged
 
     async def aclose(self) -> None:
         await self._client.aclose()
@@ -144,7 +109,7 @@ class LLMService:
         headers = {"Authorization": f"Bearer {await self._get_access_token()}"}
         files = {"file": (filename, content, content_type), "purpose": (None, "general")}
         resp = await self._gigachat_client.post(
-            "https://gigachat.devices.sberbank.ru/api/v1/files",
+            "https://api.giga.chat/v1/files",
             headers=headers,
             files=files,
         )
@@ -225,6 +190,7 @@ class LLMService:
         return {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
+            "User-Agent": "vibejob/1.0",
         }
 
     def _extract_retry_after(self, response: httpx.Response) -> float:
@@ -257,20 +223,15 @@ class LLMService:
 
     async def _call_gigachat(self, messages: List[Dict], temperature: float) -> str:
         global _current_gigachat_model
-        await self._discover_gigachat_models()
         _current_gigachat_model = self._get_model()
-        is_ultra = "Ultra" in _current_gigachat_model
-        url = self.GIGACHAT_ULTRA_CHAT_URL if is_ultra else self.GIGACHAT_CHAT_URL
         max_retries = max(0, int(self.settings.gigachat_max_retries or 0))
         attempt = 0
         async with self._semaphore:
             while True:
                 try:
                     headers = await self._headers()
-                    if is_ultra:
-                        headers["User-Agent"] = "vibejob/1.0"
                     response = await self._gigachat_client.post(
-                        url,
+                        self.GIGACHAT_CHAT_URL,
                         headers=headers,
                         json={
                             "model": self._get_model(),
