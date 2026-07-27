@@ -16,8 +16,12 @@ class KeyStore:
     def __init__(self, app_name: str = "vibejob", fallback_dir: Optional[Path] = None):
         if fallback_dir:
             self._fallback_dir = Path(fallback_dir)
-        else:
+        elif os.name == "nt":
             self._fallback_dir = Path(os.environ.get("LOCALAPPDATA", Path.home())) / app_name
+        else:
+            xdg = os.environ.get("XDG_DATA_HOME")
+            base = Path(xdg) if xdg else Path.home() / ".local" / "share"
+            self._fallback_dir = base / app_name
         self._fallback_dir.mkdir(parents=True, exist_ok=True)
         self._fallback_file = self._fallback_dir / self._FILE_NAME
         self._migrate_dpapi()

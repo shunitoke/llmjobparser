@@ -1,0 +1,53 @@
+name: Build desktop (Linux)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "desktop/**"
+      - "backend/**"
+      - "frontend/**"
+      - ".github/workflows/build-desktop-linux.yml"
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: System deps (pywebview / PyInstaller)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            libgirepository1.0-dev \
+            gir1.2-gtk-3.0 \
+            gir1.2-webkit2-4.1 \
+            pkg-config \
+            file
+
+      - name: Build
+        run: bash desktop/build-desktop.sh
+
+      - name: Smoke check binary
+        run: |
+          test -f desktop/dist/vibejob
+          file desktop/dist/vibejob | grep -qi elf
+          chmod +x desktop/dist/vibejob
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vibejob-linux-x64
+          path: desktop/dist/vibejob
+          if-no-files-found: error

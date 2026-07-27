@@ -11,7 +11,7 @@ pydantic-settings>=2.1.0
 feedparser>=6.0.10
 pywebview>=6.0
 PyInstaller>=6.0
-pywin32>=306
+pywin32>=306; platform_system == "Windows"
 keyring>=25.0
 cryptography>=42.0
 python-multipart>=0.0.9

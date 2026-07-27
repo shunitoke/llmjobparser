@@ -35,7 +35,8 @@ def build() -> None:
         check=True,
     )
 
-    print(f"Done: {dist_dir / 'vibejob.exe'}")
+    binary = "vibejob.exe" if sys.platform == "win32" else "vibejob"
+    print(f"Done: {dist_dir / binary}")
 
 
 if __name__ == "__main__":
