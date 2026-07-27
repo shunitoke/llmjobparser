@@ -6,6 +6,9 @@ cd "$ROOT"
 
 echo "Building Linux desktop binary (includes frontend build)..."
 
+echo "Installing frontend dependencies..."
+npm --prefix frontend ci
+
 if [[ ! -d backend/.venv ]]; then
   python3 -m venv backend/.venv
 fi
