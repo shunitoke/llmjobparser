@@ -8,6 +8,20 @@ from typing import Dict, List, Optional
 import httpx
 from bs4 import BeautifulSoup
 
+_SALARY_NOISE = [
+    re.compile(r"\bбез\s+опыта\b", re.IGNORECASE),
+    re.compile(r"\bпо\s+договор[её]нности\b", re.IGNORECASE),
+    re.compile(r"\bот\s+договор[её]нности\b", re.IGNORECASE),
+]
+
+
+def _sanitize_salary(salary: str) -> str:
+    if not salary:
+        return salary
+    for pat in _SALARY_NOISE:
+        salary = pat.sub("", salary)
+    return salary.strip()
+
 logger = logging.getLogger(__name__)
 
 RUSSIA_CIS_LOCATIONS = {
@@ -112,7 +126,8 @@ class BaseScraper(abc.ABC):
 
     @abc.abstractmethod
     async def search_vacancies(
-        self, query: str, max_results: int = 20, city: str = ""
+        self, query: str, max_results: int = 20, city: str = "",
+        constraints: Optional[Dict] = None,
     ) -> List[Dict]:
         """Return list of vacancy dicts from a single search query."""
         raise NotImplementedError
@@ -142,7 +157,7 @@ class BaseScraper(abc.ABC):
             "title": title,
             "url": url,
             "company": company,
-            "salary": salary,
+            "salary": _sanitize_salary(salary),
             "location": location,
             "published_at": published_at.isoformat() if isinstance(published_at, datetime) else (published_at or ""),
             "description": description,

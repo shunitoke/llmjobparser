@@ -1,3 +1,4 @@
+import { formatModelLabel } from '@/lib/models';
 import { Job } from '../types';
 import { JobCard } from './JobCard';
 
@@ -13,6 +14,7 @@ interface ResultsListProps {
   selectedTab: ResultsTab;
   onSortChange: (value: ResultsSort) => void;
   onTabChange: (value: ResultsTab) => void;
+  modelUsed?: string;
 }
 
 const SORT_OPTIONS: Array<{ value: ResultsSort; label: string }> = [
@@ -37,6 +39,7 @@ export function ResultsList({
   selectedTab,
   onSortChange,
   onTabChange,
+  modelUsed,
 }: ResultsListProps) {
   const visibleJobs = selectedTab === 'matched' ? matchedJobs : selectedTab === 'unmatched' ? unmatchedJobs : allJobs;
   const hasResults = matchedJobs.length > 0 || unmatchedJobs.length > 0;
@@ -47,7 +50,11 @@ export function ResultsList({
       {isCompleted && hasResults && (
         <p className="mb-4 text-sm text-muted-foreground" aria-live="polite">
           Найдено <strong className="text-foreground">{matchedJobs.length}</strong> подходящих вакансий из {total}
+          {modelUsed ? <> · модель: <strong className="text-foreground">{formatModelLabel(modelUsed)}</strong></> : null}
         </p>
+      )}
+      {isCompleted && !hasResults && modelUsed && (
+        <p className="mb-4 text-sm text-muted-foreground">Модель: {formatModelLabel(modelUsed)}</p>
       )}
 
       {isCompleted && matchedJobs.length === 0 && unmatchedJobs.length === 0 && (

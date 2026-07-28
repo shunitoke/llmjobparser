@@ -55,6 +55,15 @@ logger = logging.getLogger(__name__)
 @app.on_event("startup")
 async def startup():
     await init_db()
+    try:
+        config = await get_llm_config()
+        provider = str(config.get("provider") or "gigachat")
+        model = str(config.get("model") or "")
+        _key_manager.set_provider(provider)
+        if model:
+            _key_manager.set_model(model)
+    except Exception:
+        pass
 
 
 @app.get("/api/health")
@@ -111,10 +120,12 @@ async def set_llm_config_api(payload: LlmConfigPayload):
 
 
 FALLBACK_MODELS = {
-    "gigachat": ["GigaChat"],
-    "anthropic": ["claude-3-haiku", "claude-3-5-haiku", "claude-sonnet-4"],
+    "gigachat": ["GigaChat-2", "GigaChat-2-Pro", "GigaChat-2-Max", "GigaChat-3-Ultra"],
+    "anthropic": ["claude-3-5-haiku-20241022", "claude-sonnet-4-20250514"],
     "deepseek": ["deepseek-v4-flash", "deepseek-v4-pro"],
     "gemini": ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"],
+    "openai": ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini"],
+    "openrouter": ["openai/gpt-4o-mini"],
 }
 
 
@@ -131,7 +142,7 @@ async def get_llm_models(payload: LlmModelsPayload):
     suggested: list[str] = []
 
     if provider == "gigachat":
-        suggested = ["GigaChat"]
+        suggested = ["GigaChat-2", "GigaChat-2-Pro", "GigaChat-2-Max", "GigaChat-3-Ultra"]
 
     elif provider == "openai" and key:
         try:
@@ -386,7 +397,8 @@ async def get_search_status(session_id: int, db: AsyncSession = Depends(get_db))
         selected_count=session.selected_count or 0,
         scraped_count=session.scraped_count or 0,
         generated_queries=session.generated_queries,
-        current_model=get_current_gigachat_model(),
+        current_model=get_current_gigachat_model() or _key_manager.get_model() or "",
+        error=session.error_message or "",
     )
 
 

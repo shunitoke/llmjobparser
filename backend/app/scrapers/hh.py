@@ -14,6 +14,8 @@ class HHScraper(BaseScraper):
 
     CITY_IDS = {
         "москва": 1,
+        "питер": 2,
+        "спб": 2,
         "санкт-петербург": 2,
         "новосибирск": 4,
         "екатеринбург": 3,
@@ -31,10 +33,17 @@ class HHScraper(BaseScraper):
     }
 
     async def search_vacancies(
-        self, query: str, max_results: int = 20, city: str = ""
+        self, query: str, max_results: int = 20, city: str = "",
+        constraints: Optional[Dict] = None,
     ) -> List[Dict]:
         vacancies: List[Dict] = []
         page = 0
+        c = constraints or {}
+        salary_from = c.get("salary_from")
+        schedule = c.get("schedule")
+        employment = c.get("employment")
+        experience = c.get("experience")
+        remote = c.get("remote")
         while len(vacancies) < max_results:
             params: Dict = {
                 "text": query,
@@ -48,6 +57,19 @@ class HHScraper(BaseScraper):
                     params["area"] = self.CITY_IDS[city_lower]
                 else:
                     params["text"] = f"{query} {city}"
+            # Apply LLM-extracted constraints
+            if salary_from and isinstance(salary_from, (int, float)) and salary_from > 0:
+                params["salary"] = int(salary_from)
+                params["currency_code"] = c.get("currency", "RUB")
+                params["only_with_salary"] = "true"
+            if schedule:
+                params["schedule"] = schedule
+            if remote and not schedule:
+                params["schedule"] = "remote"
+            if employment:
+                params["employment"] = employment
+            if experience:
+                params["experience"] = experience
             try:
                 resp = await self._get("https://hh.ru/search/vacancy", params=params)
                 if not resp:
@@ -94,14 +116,23 @@ class HHScraper(BaseScraper):
             company = company_elem.get_text(strip=True) if company_elem else ""
             salary_elem = (
                 card.select_one("[data-qa='vacancy-serp__vacancy-compensation']")
-                or card.select_one("[class*='compensation']")
+                or card.select_one(".vacancy-serp__vacancy-compensation")
+                or card.select_one("[data-qa='vacancy-compensation']")
             )
             salary = salary_elem.get_text(strip=True) if salary_elem else ""
             location_elem = (
                 card.select_one("[data-qa='vacancy-serp__vacancy-address']")
+                or card.select_one("[data-qa='vacancy-serp__vacancy-compensation']")
                 or card.select_one("[class*='address']")
+                or card.select_one("[class*='metro']")
             )
             location = location_elem.get_text(strip=True) if location_elem else ""
+            if not location:
+                for el in card.select("[class*='metro'], [class*='address'], [class*='location']"):
+                    txt = el.get_text(strip=True)
+                    if txt and len(txt) < 150:
+                        location = txt
+                        break
             date_elem = (
                 card.select_one("[data-qa='vacancy-serp__vacancy-date']")
                 or card.select_one("time")
@@ -112,6 +143,9 @@ class HHScraper(BaseScraper):
                 dt = date_elem.get("datetime") or date_elem.get_text(strip=True)
                 if dt:
                     published_at = dt
+            if not published_at:
+                from datetime import datetime
+                published_at = datetime.utcnow().isoformat()
             return self._vacancy_stub(
                 source_id=source_id,
                 title=title,

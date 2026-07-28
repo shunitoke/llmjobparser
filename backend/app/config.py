@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     gigachat_auth_key: str = ""
     database_url: str = "sqlite+aiosqlite:///./jobs.db"
-    gigachat_model: str = "GigaChat"
+    gigachat_model: str = "GigaChat-2"
     gigachat_scope: str = "GIGACHAT_API_PERS"
     gigachat_timeout_seconds: float = 60.0
     gigachat_max_retries: int = 4

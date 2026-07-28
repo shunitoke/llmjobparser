@@ -126,6 +126,7 @@ def main() -> None:
         width=1280,
         height=800,
         min_size=(900, 600),
+        maximized=True,
     )
     window.expose(bridge.getKeyStatus, bridge.setKey, bridge.deleteKey, bridge.getStoredKey, bridge.openExternalLink)
 

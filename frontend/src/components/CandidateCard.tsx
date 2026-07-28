@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { Building2, Calendar, ExternalLink, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatRelativeDate } from '@/lib/dates';
-import { getJobSource, getJobSourceBadgeClass } from '@/lib/sources';
+import { getJobSourceLabel, getJobSourceBadgeClass } from '@/lib/sources';
 import { CandidateJob } from '../types';
 
 interface CandidateCardProps {
@@ -10,15 +10,15 @@ interface CandidateCardProps {
 }
 
 export const CandidateCard = memo(function CandidateCard({ item }: CandidateCardProps) {
-  const relativeDate = formatRelativeDate(item.created_at);
-  const source = getJobSource(item);
+  const relativeDate = formatRelativeDate(item.published_at || item.created_at);
+  const source = getJobSourceLabel(item);
   const sourceBadgeClass = getJobSourceBadgeClass(item);
 
   return (
     <article className="rounded-lg border border-border/60 bg-background/50 p-3 transition-colors hover:bg-accent/30">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
+          <div className="mb-1.5 flex flex-wrap items-center gap-2">
             <span
               className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-medium leading-relaxed ${sourceBadgeClass}`}
             >

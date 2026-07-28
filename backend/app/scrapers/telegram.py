@@ -16,7 +16,8 @@ class TelegramScraper(BaseScraper):
     base_url = "https://t.me/s"
 
     async def search_vacancies(
-        self, query: str, max_results: int = 20, city: str = ""
+        self, query: str, max_results: int = 20, city: str = "",
+        constraints: Optional[Dict] = None,
     ) -> List[Dict]:
         vacancies: List[Dict] = []
         query_tokens = [t.lower() for t in query.split() if t]
@@ -78,6 +79,9 @@ class TelegramScraper(BaseScraper):
                         published_at = datetime.fromisoformat(dt.replace("Z", "+00:00")).isoformat()
                     except Exception:
                         published_at = dt
+            if not published_at:
+                from datetime import datetime
+                published_at = datetime.utcnow().isoformat()
             return self._vacancy_stub(
                 source_id=source_id,
                 title=title,

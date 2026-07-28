@@ -39,6 +39,7 @@ class CandidateJobResponse(BaseModel):
     url: str
     source: str
     category: Optional[str]
+    published_at: Optional[datetime] = None
     selected: bool
     created_at: datetime
 
@@ -82,3 +83,4 @@ class SearchStatusResponse(BaseModel):
     scraped_count: int = 0
     generated_queries: Optional[str] = None
     current_model: str = ""
+    error: str = ""

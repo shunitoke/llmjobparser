@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 import logging
 import re
@@ -15,17 +16,30 @@ from app.settings_store import get_llm_config
 
 logger = logging.getLogger(__name__)
 
-_current_gigachat_model: str = ""
+_current_model: str = ""
+
+
+def _is_valid_base64(s: str) -> bool:
+    import base64 as _b64
+    try:
+        _b64.b64decode(s, validate=True)
+        return True
+    except Exception:
+        return False
 
 
 def get_current_gigachat_model() -> str:
-    return _current_gigachat_model
+    return _current_model
+
+
+def get_current_model() -> str:
+    return _current_model
 
 
 def sanitize_description(text: str) -> str:
     text = re.sub(r'!\[.*?\]\(.*?\)', '', text)
     text = re.sub(r'<img[^>]*>', '', text)
-    text = re.sub(r'ERROR: Cannot read.*?\.(\s|$)', '', text)
+    text = re.sub(r'^ERROR:\s*Cannot\s+read.*$', '', text, flags=re.MULTILINE | re.IGNORECASE)
     text = re.sub(r'\n{3,}', '\n\n', text)
     return text.strip()
 
@@ -38,7 +52,14 @@ class LLMService:
     ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1"
     DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
     GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
-    GIGACHAT_MODELS = ["GigaChat", "GigaChat-Pro", "GigaChat-Max", "GigaChat-3-Ultra"]
+    GIGACHAT_MODELS = ["GigaChat-2", "GigaChat-2-Pro", "GigaChat-2-Max", "GigaChat-3-Ultra"]
+    GIGACHAT_MODEL_ALIASES = {
+        "GigaChat": "GigaChat-2",
+        "GigaChat-Lite": "GigaChat-2",
+        "GigaChat-Pro": "GigaChat-2-Pro",
+        "GigaChat-Max": "GigaChat-2-Max",
+        "GigaChat-Ultra": "GigaChat-3-Ultra",
+    }
 
     def __init__(self):
         self.settings = get_settings()
@@ -68,10 +89,13 @@ class LLMService:
         return self._key_manager.get_key()
 
     def _get_model(self) -> str:
+        provider = self._get_provider()
+        if provider == "gigachat":
+            idx = min(self._gigachat_model_idx, len(self.GIGACHAT_MODELS) - 1)
+            return self.GIGACHAT_MODELS[idx]
         mg = self._key_manager.get_model()
         if mg:
             return mg
-        provider = self._get_provider()
         if provider == "openai":
             return self.settings.openai_model or "gpt-4o-mini"
         if provider == "openrouter":
@@ -82,19 +106,39 @@ class LLMService:
             return self.settings.deepseek_model or "deepseek-v4-flash"
         if provider == "gemini":
             return self.settings.gemini_model or "gemini-2.0-flash"
-        idx = min(self._gigachat_model_idx, len(self.GIGACHAT_MODELS) - 1)
-        return self.GIGACHAT_MODELS[idx]
+        return self.GIGACHAT_MODELS[0]
+
+    def _normalize_gigachat_model(self, model: str) -> str:
+        return self.GIGACHAT_MODEL_ALIASES.get(model, model)
+
+    def _preferred_gigachat_start_idx(self) -> int:
+        preferred = self._normalize_gigachat_model(
+            self._key_manager.get_model()
+            or self.settings.gigachat_model
+            or self.GIGACHAT_MODELS[0]
+        )
+        try:
+            return self.GIGACHAT_MODELS.index(preferred)
+        except ValueError:
+            return 0
 
     def reset_gigachat_model(self) -> None:
-        self._gigachat_model_idx = 0
+        """Reset GigaChat rotation (Lite→…→Ultra) and publish current model for status UI."""
+        global _current_model
+        if self._get_provider() == "gigachat":
+            self._gigachat_model_idx = self._preferred_gigachat_start_idx()
+        else:
+            self._gigachat_model_idx = 0
+        _current_model = self._get_model()
 
     def _rotate_gigachat_model(self) -> bool:
-        global _current_gigachat_model
+        """Move up the ladder: Lite → Pro → Max → Ultra."""
+        global _current_model
         if self._gigachat_model_idx >= len(self.GIGACHAT_MODELS) - 1:
             return False
         self._gigachat_model_idx += 1
         model = self.GIGACHAT_MODELS[self._gigachat_model_idx]
-        _current_gigachat_model = model
+        _current_model = model
         logger.warning("Rotated GigaChat model to %s", model)
         return True
 
@@ -169,18 +213,65 @@ class LLMService:
         key = self._get_api_key()
         if not key:
             raise RuntimeError("GigaChat authorization key is not configured")
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "RqUID": str(uuid.uuid4()),
-            "Authorization": f"Bearer {key}",
-        }
+        if not key.isascii():
+            raise RuntimeError(
+                "Ключ содержит кириллицу или лишние символы. "
+                "Скопируйте заново только сам ключ из личного кабинета."
+            )
+        logger.info("[gigachat] OAuth key: len=%d, valid_b64=%s", len(key), _is_valid_base64(key))
         data = {"scope": self.settings.gigachat_scope}
-        resp = await self._gigachat_client.post(self.GIGACHAT_OAUTH_URL, headers=headers, data=data)
-        resp.raise_for_status()
+
+        async def _try_auth(auth_value: str) -> httpx.Response:
+            h = {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
+                "RqUID": str(uuid.uuid4()),
+                "Authorization": auth_value,
+            }
+            return await self._gigachat_client.post(
+                self.GIGACHAT_OAUTH_URL, headers=h, data=data
+            )
+
+        try:
+            resp = await _try_auth(f"Basic {key}")
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            self._access_token = None
+            self._token_expires_at = 0.0
+            if e.response.status_code == 400:
+                logger.warning("[gigachat] Basic auth 400, trying Bearer fallback")
+                try:
+                    resp = await _try_auth(f"Bearer {key}")
+                    resp.raise_for_status()
+                except httpx.HTTPStatusError as e2:
+                    self._access_token = None
+                    self._token_expires_at = 0.0
+                    body = e2.response.text
+                    logger.error("[gigachat] OAuth %d body: %s", e2.response.status_code, body)
+                    raise RuntimeError(
+                        f"GigaChat OAuth ({e2.response.status_code}): {body[:200]}"
+                    ) from e2
+            elif e.response.status_code == 429:
+                retry_after = float(e.response.headers.get("Retry-After", 0))
+                wait = max(retry_after, 5.0)
+                await asyncio.sleep(wait)
+                resp = await _try_auth(f"Basic {key}")
+                resp.raise_for_status()
+            else:
+                body = e.response.text
+                logger.error("[gigachat] OAuth %d body: %s", e.response.status_code, body)
+                raise RuntimeError(
+                    f"GigaChat OAuth ({e.response.status_code}): {body[:200]}"
+                ) from e
         body = resp.json()
         self._access_token = body["access_token"]
+        expires = body.get("expires_at")
         try:
-            self._token_expires_at = datetime.fromisoformat(body["expires_at"]).timestamp()
+            if isinstance(expires, (int, float)):
+                # ms timestamps are > year 2100 in seconds
+                self._token_expires_at = float(expires) / 1000.0 if expires > 1e12 else float(expires)
+            else:
+                self._token_expires_at = datetime.fromisoformat(str(expires)).timestamp()
         except Exception:
             self._token_expires_at = time.time() + 1800
         return self._access_token
@@ -205,7 +296,9 @@ class LLMService:
     # ── Unified LLM call ──
 
     async def _call_llm(self, messages: List[Dict], temperature: float = 0.7) -> str:
+        global _current_model
         provider = self._get_provider()
+        _current_model = self._get_model()
         if provider == "gigachat":
             return await self._call_gigachat(messages, temperature)
         elif provider == "openai":
@@ -222,8 +315,8 @@ class LLMService:
             raise RuntimeError(f"Unknown LLM provider: {provider}")
 
     async def _call_gigachat(self, messages: List[Dict], temperature: float) -> str:
-        global _current_gigachat_model
-        _current_gigachat_model = self._get_model()
+        global _current_model
+        _current_model = self._get_model()
         max_retries = max(0, int(self.settings.gigachat_max_retries or 0))
         attempt = 0
         async with self._semaphore:
@@ -440,8 +533,9 @@ class LLMService:
 
     # ── Job analysis methods ──
 
-    async def generate_search_queries(self, user_prompt: str, categories: List[str] = None, lang: str = "ru") -> List[str]:
+    async def generate_search_queries(self, user_prompt: str, categories: List[str] = None, lang: str = "ru", city: str = "") -> List[str]:
         """Generate search queries based on user prompt."""
+        city_hint = f"\nГород для поиска: {city}. Учитывай локальные особенности." if city and lang != "en" else (f"\nCity: {city}. Consider local specifics." if city else "")
         if lang == "en":
             categories_hint = ""
             if categories:
@@ -459,7 +553,7 @@ Rules:
 - Each query should be a real job title or search term
 - Diverse mix: different industries, seniority levels, work types
 - Return ONLY a JSON array of strings, no explanations"""
-            user_content = f"Desired job description: {user_prompt}{categories_hint}"
+            user_content = f"Desired job description: {user_prompt}{categories_hint}{city_hint}"
         else:
             categories_hint = ""
             if categories:
@@ -477,7 +571,7 @@ Rules:
 - Каждый запрос — реальное название должности или поисковый термин
 - Разнообразный микс: разные отрасли, уровни, типы занятости
 - Возвращай ТОЛЬКО JSON массив строк, без пояснений"""
-            user_content = f"Описание желаемой работы: {user_prompt}{categories_hint}"
+            user_content = f"Описание желаемой работы: {user_prompt}{categories_hint}{city_hint}"
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -540,9 +634,85 @@ Rules:
         except json.JSONDecodeError:
             return [user_prompt]
 
-    async def analyze_vacancy(self, user_prompt: str, vacancy: Dict, lang: str = "ru") -> Tuple[bool, str]:
+    async def extract_search_constraints(
+        self, user_prompt: str, lang: str = "ru", city: str = ""
+    ) -> Dict[str, Any]:
+        """Extract structured job search constraints from natural language prompt.
+
+        Handles typos, colloquialisms and implicit requirements.
+        """
+        city_hint = f' Уже известный город: "{city}".' if city else ""
+        if lang == "en":
+            system_content = """You are a job search assistant. Extract structured search constraints from the user's free text.
+
+Return ONLY a JSON object with these fields (omit if not mentioned):
+{
+  "city": "normalized city name (e.g. 'Saint Petersburg', 'Moscow') or null",
+  "salary_from": integer (e.g. 150000) or null,
+  "currency": "RUB|USD|EUR" or null,
+  "remote": true/false or null,
+  "schedule": "fullDay|flexible|shift|flyInFlyOut|remote" or null,
+  "employment": "full|part|project|volunteer|probation" or null,
+  "experience": "noExperience|between1And3|between3And6|moreThan6" or null
+}
+
+Rules:
+- Fix typos: 'питер' → 'Saint Petersburg', 'мск' → 'Moscow'
+- 'бабла поднять' / 'деньги' implies salary_from if number mentioned
+- 'ненапряжная' / 'без стресса' → schedule: 'flexible'
+- 'без созвонов' / 'удалёнка' → remote: true
+- 'частичная' / 'подработка' → employment: 'part'
+- 'джун' / 'без опыта' → experience: 'noExperience'
+- 'сеньор' / 'ведущий' → experience: 'moreThan6'""" + city_hint
+            user_content = f"Extract from: {user_prompt}"
+        else:
+            system_content = """Ты помощник для поиска работы. Извлеки структурированные параметры поиска из свободного текста пользователя.
+
+Верни ТОЛЬКО JSON объект с полями (пропускай если не упомянуто):
+{
+  "city": "нормализованное название города (например 'Санкт-Петербург', 'Москва') или null",
+  "salary_from": число (например 150000) или null,
+  "currency": "RUB|USD|EUR" или null,
+  "remote": true/false или null,
+  "schedule": "fullDay|flexible|shift|flyInFlyOut|remote" или null,
+  "employment": "full|part|project|volunteer|probation" или null,
+  "experience": "noExperience|between1And3|between3And6|moreThan6" или null
+}
+
+Правила:
+- Исправляй опечатки: 'питер' → 'Санкт-Петербург', 'мск' → 'Москва'
+- 'бабла поднять' / 'деньги' подразумевает salary_from если есть число
+- 'ненапряжная' / 'без стресса' → schedule: 'flexible'
+- 'без созвонов' / 'удалёнка' → remote: true
+- 'частичная' / 'подработка' → employment: 'part'
+- 'джун' / 'без опыта' → experience: 'noExperience'
+- 'сеньор' / 'ведущий' → experience: 'moreThan6'""" + city_hint
+            user_content = f"Извлеки из: {user_prompt}"
+
+        messages = [
+            {"role": "system", "content": system_content},
+            {"role": "user", "content": user_content},
+        ]
+
+        result = await self._call_llm(messages, temperature=0.1)
+        try:
+            result = result.strip()
+            if result.startswith("```"):
+                result = result.split("\n", 1)[1]
+                result = result.rsplit("```", 1)[0]
+            data = json.loads(result)
+            if not isinstance(data, dict):
+                return {}
+            # Normalize null values to None
+            return {k: v for k, v in data.items() if v is not None and v != ""}
+        except json.JSONDecodeError:
+            logger.warning("[llm] extract_search_constraints JSON parse failed: %s", result[:200])
+            return {}
+
+    async def analyze_vacancy(self, user_prompt: str, vacancy: Dict, lang: str = "ru", city: str = "") -> Tuple[bool, str]:
         """Analyze if a vacancy matches user's requirements."""
         desc = sanitize_description(vacancy.get('description', ''))
+        city_req = f"\nВАЖНО: пользователь хочет работу в городе {city}. Учитывай локацию в первую очередь." if city and lang != "en" else (f"\nIMPORTANT: user wants a job in {city}. Prioritize location." if city else "")
         if lang == "en":
             vacancy_text = f"""
 Title: {vacancy.get('title', '')}
@@ -560,7 +730,7 @@ Description:
 IMPORTANT: Analyze both explicit and implicit requirements.
 Respond STRICTLY in JSON format:
 {"match": true/false, "reason": "brief explanation in English (1-2 sentences)"}"""
-            user_content = f"User request: {user_prompt}\n\nVacancy:\n{vacancy_text}"
+            user_content = f"User request: {user_prompt}{city_req}\n\nVacancy:\n{vacancy_text}"
         else:
             vacancy_text = f"""
 Название: {vacancy.get('title', '')}
@@ -577,7 +747,7 @@ Respond STRICTLY in JSON format:
 
 Ответь СТРОГО в JSON формате:
 {"match": true/false, "reason": "краткое объяснение на русском (1-2 предложения)"}"""
-            user_content = f"Запрос пользователя: {user_prompt}\n\nВакансия:\n{vacancy_text}"
+            user_content = f"Запрос пользователя: {user_prompt}{city_req}\n\nВакансия:\n{vacancy_text}"
 
         messages = [
             {"role": "system", "content": system_content},
@@ -592,12 +762,13 @@ Respond STRICTLY in JSON format:
                 result = result.split("\n", 1)[1]
                 result = result.rsplit("```", 1)[0]
             data = json.loads(result)
-            return data.get("match", False), data.get("reason", "")
+            return data.get("match", False), sanitize_description(data.get("reason", ""))
         except json.JSONDecodeError:
             return False, "Ошибка анализа"
 
-    async def select_candidate_ids(self, user_prompt: str, candidates: List[Dict], target: int = 100, lang: str = "ru") -> List[str]:
+    async def select_candidate_ids(self, user_prompt: str, candidates: List[Dict], target: int = 100, lang: str = "ru", city: str = "") -> List[str]:
         """Select best candidate vacancy IDs based on title-card info to reduce deep scraping."""
+        city_sel = f" Город: {city}." if city and lang != "en" else (f" City: {city}." if city else "")
 
         def compact(items: List[Dict]) -> str:
             lines: List[str] = []
@@ -619,13 +790,13 @@ Respond STRICTLY in JSON format:
                     "You are a job selection assistant. Based on the user's request, select the most suitable vacancies from the list. "
                     "Return STRICTLY a JSON array of IDs (first field before '|'). No other text."
                 )
-                user_content = f"Request: {user_prompt}\n\nSelect up to {k} IDs from the list below:\n\n{compact(chunk)}"
+                user_content = f"Request: {user_prompt}{city_sel}\n\nSelect up to {k} IDs from the list below:\n\n{compact(chunk)}"
             else:
                 system_content = (
                     "Ты помощник по отбору вакансий. По запросу пользователя выбери наиболее подходящие вакансии из списка. "
                     "Верни СТРОГО JSON массив ID (первое поле до '|'). Никакого текста."
                 )
-                user_content = f"Запрос: {user_prompt}\n\nВыбери до {k} ID из списка ниже:\n\n{compact(chunk)}"
+                user_content = f"Запрос: {user_prompt}{city_sel}\n\nВыбери до {k} ID из списка ниже:\n\n{compact(chunk)}"
 
             messages = [
                 {"role": "system", "content": system_content},

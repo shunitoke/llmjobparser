@@ -9,6 +9,8 @@ import os
 from pathlib import Path
 from typing import Optional
 
+from app.key_manager import sanitize_key
+
 
 class KeyStore:
     _FILE_NAME = "vibejob.key"
@@ -53,9 +55,10 @@ class KeyStore:
             return None
 
     def set_key(self, key: str) -> None:
-        if not key or not key.strip():
+        cleaned = sanitize_key(key)
+        if not cleaned:
             raise ValueError("Key cannot be empty")
-        self._fallback_file.write_text(key.strip(), encoding="utf-8")
+        self._fallback_file.write_text(cleaned, encoding="utf-8")
 
     def delete_key(self) -> None:
         if self._fallback_file.exists():

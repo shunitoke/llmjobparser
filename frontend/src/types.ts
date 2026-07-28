@@ -37,6 +37,7 @@ export interface SearchStatus {
   candidates_count: number;
   selected_count: number;
   current_model: string;
+  error?: string;
 }
 
 export interface CandidateJob {
@@ -49,6 +50,8 @@ export interface CandidateJob {
   location: string | null;
   url: string;
   source: string;
+  category: string | null;
+  published_at?: string | null;
   selected: boolean;
   created_at: string;
 }

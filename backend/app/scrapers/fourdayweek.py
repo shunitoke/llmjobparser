@@ -14,7 +14,8 @@ class FourDayWeekScraper(BaseScraper):
     base_url = "https://4dayweek.io"
 
     async def search_vacancies(
-        self, query: str, max_results: int = 20, city: str = ""
+        self, query: str, max_results: int = 20, city: str = "",
+        constraints: Optional[Dict] = None,
     ) -> List[Dict]:
         vacancies: List[Dict] = []
         page = 1

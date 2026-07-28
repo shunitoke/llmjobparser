@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { Building2, Briefcase, Calendar, ChevronDown, ExternalLink, MapPin } from 'lucide-react';
+import { useState } from 'react';
+import { Building2, Briefcase, Calendar, ChevronDown, Clock, ExternalLink, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatRelativeDate } from '@/lib/dates';
 import { getJobSourceLabel, getJobSourceBadgeClass } from '@/lib/sources';
@@ -11,33 +11,22 @@ interface JobCardProps {
 
 export function JobCard({ job }: JobCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const [animHeight, setAnimHeight] = useState(0);
-  const extraRef = useRef<HTMLDivElement>(null);
   const isMatch = job.is_match === true;
   const source = getJobSourceLabel(job);
   const sourceBadgeClass = getJobSourceBadgeClass(job);
   const relativeDate = formatRelativeDate(job.published_at);
-  const hasExtra = Boolean(job.match_reason || job.experience || (job.description && expanded));
-
-  useEffect(() => {
-    if (hasExtra && extraRef.current) {
-      const h = extraRef.current.scrollHeight;
-      setAnimHeight(h);
-    } else {
-      setAnimHeight(0);
-    }
-  }, [hasExtra, job.match_reason, job.experience, job.description, expanded]);
+  const hasExtra = Boolean(job.match_reason || job.description);
 
   return (
     <article
-      className={`relative overflow-hidden rounded-xl border bg-card transition-all hover:shadow-sm ${
+      className={`relative rounded-xl border bg-card transition-all hover:shadow-sm ${
         isMatch ? 'border-l-[3px] border-l-primary border-y border-r border-border' : 'border-border/60'
       }`}
     >
       <div className="p-4">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <div className="mb-2.5 flex flex-wrap items-center gap-2">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
               <span
                 className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-medium leading-relaxed ${sourceBadgeClass}`}
               >
@@ -81,32 +70,31 @@ export function JobCard({ job }: JobCardProps) {
                   {job.location}
                 </span>
               )}
+              {job.experience && (
+                <span className="inline-flex items-center gap-1">
+                  <Briefcase className="h-3 w-3" aria-hidden="true" />
+                  {job.experience}
+                </span>
+              )}
+              {job.employment_type && (
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="h-3 w-3" aria-hidden="true" />
+                  {job.employment_type}
+                </span>
+              )}
               {job.salary && <span className="font-medium text-foreground">{job.salary}</span>}
             </div>
           </div>
         </div>
 
-        <div
-          className="transition-all duration-300 ease-out overflow-hidden"
-          style={{ maxHeight: animHeight > 0 ? `${animHeight}px` : '0px', opacity: animHeight > 0 ? 1 : 0 }}
-        >
-          <div ref={extraRef}>
+        {hasExtra && (
+          <div className="mt-3 space-y-2">
             {job.match_reason && (
-              <p className="mt-3 text-sm text-foreground/80">
-                <span className="font-medium text-foreground">Почему подходит: </span>
-                {job.match_reason}
-              </p>
-            )}
-
-            {job.experience && (
-              <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-                <Briefcase className="h-3 w-3" aria-hidden="true" />
-                {job.experience}
-              </div>
+              <p className="text-sm text-foreground/80">{job.match_reason}</p>
             )}
 
             {job.description && (
-              <div className="mt-3">
+              <div>
                 <Button
                   type="button"
                   variant="ghost"
@@ -129,7 +117,7 @@ export function JobCard({ job }: JobCardProps) {
               </div>
             )}
           </div>
-        </div>
+        )}
       </div>
     </article>
   );

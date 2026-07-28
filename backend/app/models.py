@@ -16,6 +16,7 @@ class SearchSession(Base):
     status = Column(String(50), default="pending")
     current_query = Column(String(200), default="")
     current_source = Column(String(50), default="")
+    error_message = Column(Text, default="")
     scraped_count = Column(Integer, default=0)
     candidates_count = Column(Integer, default=0)
     selected_count = Column(Integer, default=0)
@@ -37,6 +38,7 @@ class CandidateJob(Base):
     url = Column(String(1000))
     source = Column(String(50))
     category = Column(String(100))
+    published_at = Column(DateTime)
     selected = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 

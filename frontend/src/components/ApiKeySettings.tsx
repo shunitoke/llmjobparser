@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Eye, EyeOff, Trash2, RefreshCw } from 'lucide-react';
+import { Eye, EyeOff, Trash2, RefreshCw, ClipboardPaste } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getDesktopApi, waitForDesktopApi } from '@/lib/desktop';
+import { formatModelLabel } from '@/lib/models';
 
 type Provider = 'gigachat' | 'openai' | 'openrouter' | 'anthropic' | 'deepseek' | 'gemini';
 
@@ -18,8 +19,10 @@ type ApiKeySettingsProps = {
   onDeleted?: () => void;
 };
 
+const GIGACHAT_MODELS = ['GigaChat-2', 'GigaChat-2-Pro', 'GigaChat-2-Max', 'GigaChat-3-Ultra'];
+
 const FALLBACK_MODELS: Record<Provider, string> = {
-  gigachat: 'GigaChat',
+  gigachat: 'GigaChat-2',
   openai: 'gpt-4o-mini',
   openrouter: 'openai/gpt-4o-mini',
   anthropic: 'claude-3-5-haiku-20241022',
@@ -78,8 +81,8 @@ export function ApiKeySettings({ onSaved, onDeleted }: ApiKeySettingsProps) {
 
   const detectModels = async (p: Provider, k: string) => {
     if (p === 'gigachat') {
-      setAvailableModels(['GigaChat']);
-      setModel('GigaChat');
+      setAvailableModels(GIGACHAT_MODELS);
+      setModel(GIGACHAT_MODELS[0]);
       return;
     }
     if (!k) return;
@@ -131,8 +134,8 @@ export function ApiKeySettings({ onSaved, onDeleted }: ApiKeySettingsProps) {
       if (p !== 'gigachat' && storedKey) {
         await detectModels(p as Provider, storedKey);
       } else if (p === 'gigachat') {
-        setModel('GigaChat');
-        setAvailableModels(['GigaChat']);
+        setAvailableModels(GIGACHAT_MODELS);
+        setModel((prev) => prev || GIGACHAT_MODELS[0]);
       }
     }
     load();
@@ -231,6 +234,15 @@ export function ApiKeySettings({ onSaved, onDeleted }: ApiKeySettingsProps) {
   const canSave = key.trim().length > 0 && status !== 'saving';
   const displayModel = model || (availableModels[0] || FALLBACK_MODELS[provider]);
 
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) setKey(text.trim());
+    } catch {
+      // clipboard API may fail — user can still Ctrl+V
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div className="space-y-2">
@@ -258,20 +270,37 @@ export function ApiKeySettings({ onSaved, onDeleted }: ApiKeySettingsProps) {
             placeholder={loadingConfig ? 'Загружаем…' : PROVIDER_KEY_PLACEHOLDERS[provider]}
             value={key}
             onChange={(e) => setKey(e.target.value)}
+            onPaste={(e) => {
+              const text = e.clipboardData.getData('text');
+              if (text) setKey(text.trim());
+            }}
             disabled={loadingConfig}
-            className="pr-10"
+            className="pr-20"
           />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="absolute right-0 top-0 h-10 w-10 text-muted-foreground"
-            onClick={() => setShowKey((v) => !v)}
-            aria-label={showKey ? 'Скрыть ключ' : 'Показать ключ'}
-            disabled={loadingConfig}
-          >
-            {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </Button>
+          <div className="absolute right-0 top-0 flex h-10">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 text-muted-foreground hover:text-foreground"
+              onClick={handlePaste}
+              title="Вставить из буфера"
+              disabled={loadingConfig}
+            >
+              <ClipboardPaste className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 text-muted-foreground"
+              onClick={() => setShowKey((v) => !v)}
+              aria-label={showKey ? 'Скрыть ключ' : 'Показать ключ'}
+              disabled={loadingConfig}
+            >
+              {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+          </div>
         </div>
         {(key.trim() && !detecting && provider !== 'gigachat') && (
           <button
@@ -286,9 +315,29 @@ export function ApiKeySettings({ onSaved, onDeleted }: ApiKeySettingsProps) {
         {detecting && (
           <p className="text-xs text-muted-foreground">Определение модели...</p>
         )}
+        {!key.trim() && !loadingConfig && (
+          <p className="text-xs text-muted-foreground">Ctrl+V или нажмите <ClipboardPaste className="inline h-3 w-3" /> чтобы вставить</p>
+        )}
       </div>
 
-      {provider !== 'gigachat' && (
+      {provider === 'gigachat' ? (
+        <div className="space-y-1">
+          <Label htmlFor="gigachat-model">Модель</Label>
+          <select
+            id="gigachat-model"
+            value={model || GIGACHAT_MODELS[0]}
+            onChange={(e) => setModel(e.target.value)}
+            disabled={loadingConfig}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {GIGACHAT_MODELS.map((id) => (
+              <option key={id} value={id}>
+                {formatModelLabel(id)}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : (
         <div className="space-y-1">
           <Label>Модель</Label>
           <div className="flex items-center gap-2 text-sm">

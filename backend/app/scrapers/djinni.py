@@ -14,7 +14,8 @@ class DjinniScraper(BaseScraper):
     base_url = "https://djinni.co"
 
     async def search_vacancies(
-        self, query: str, max_results: int = 20, city: str = ""
+        self, query: str, max_results: int = 20, city: str = "",
+        constraints: Optional[Dict] = None,
     ) -> List[Dict]:
         vacancies: List[Dict] = []
         page = 1
@@ -93,6 +94,19 @@ class DjinniScraper(BaseScraper):
                     continue
                 location_tokens.append(txt)
             location = ", ".join(location_tokens[:3])
+            date_elem = (
+                card.select_one(".job-item__date")
+                or card.select_one("time")
+                or card.select_one("[class*='date']")
+            )
+            published_at = ""
+            if date_elem:
+                dt = date_elem.get("datetime") or date_elem.get_text(strip=True)
+                if dt:
+                    published_at = dt
+            if not published_at:
+                from datetime import datetime
+                published_at = datetime.utcnow().isoformat()
             return self._vacancy_stub(
                 source_id=source_id,
                 title=title,
@@ -100,6 +114,7 @@ class DjinniScraper(BaseScraper):
                 company=company,
                 salary=salary,
                 location=location,
+                published_at=published_at,
             )
         except Exception as exc:
             logger.warning("[djinni] parse card error: %s", exc)

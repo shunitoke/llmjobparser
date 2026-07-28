@@ -15,7 +15,8 @@ class WeWorkRemotelyScraper(BaseScraper):
     base_url = "https://weworkremotely.com"
 
     async def search_vacancies(
-        self, query: str, max_results: int = 20, city: str = ""
+        self, query: str, max_results: int = 20, city: str = "",
+        constraints: Optional[Dict] = None,
     ) -> List[Dict]:
         vacancies: List[Dict] = []
         try:
@@ -54,6 +55,9 @@ class WeWorkRemotelyScraper(BaseScraper):
             published_at = ""
             if entry.get("published_parsed"):
                 published_at = datetime(*entry.published_parsed[:6]).isoformat()
+            if not published_at:
+                from datetime import datetime
+                published_at = datetime.utcnow().isoformat()
             return self._vacancy_stub(
                 source_id=source_id,
                 title=title,

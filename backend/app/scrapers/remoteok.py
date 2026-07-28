@@ -12,7 +12,8 @@ class RemoteOKScraper(BaseScraper):
     base_url = "https://remoteok.com"
 
     async def search_vacancies(
-        self, query: str, max_results: int = 20, city: str = ""
+        self, query: str, max_results: int = 20, city: str = "",
+        constraints: Optional[Dict] = None,
     ) -> List[Dict]:
         vacancies: List[Dict] = []
         query_tokens = [t.lower() for t in query.split() if t]
@@ -63,6 +64,9 @@ class RemoteOKScraper(BaseScraper):
                     published_at = datetime.fromtimestamp(int(item["date"])).isoformat()
                 except Exception:
                     published_at = str(item["date"])
+            if not published_at:
+                from datetime import datetime
+                published_at = datetime.utcnow().isoformat()
             return self._vacancy_stub(
                 source_id=source_id,
                 title=title,

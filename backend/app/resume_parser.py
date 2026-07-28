@@ -21,6 +21,7 @@ _MAX_SIZE = 5 * 1024 * 1024  # 5 MB
 class ResumeParser:
     def __init__(self):
         self._llm = LLMService()
+        self._llm.reset_gigachat_model()
 
     async def close(self) -> None:
         await self._llm.aclose()

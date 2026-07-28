@@ -14,14 +14,29 @@ class SuperJobScraper(BaseScraper):
     base_url = "https://www.superjob.ru"
 
     async def search_vacancies(
-        self, query: str, max_results: int = 20, city: str = ""
+        self, query: str, max_results: int = 20, city: str = "",
+        constraints: Optional[Dict] = None,
     ) -> List[Dict]:
         vacancies: List[Dict] = []
         page = 1
+        c = constraints or {}
+        salary_from = c.get("salary_from")
+        schedule = c.get("schedule")
+        employment = c.get("employment")
+        experience = c.get("experience")
+        remote = c.get("remote")
         while len(vacancies) < max_results and page <= 10:
             params: Dict = {"keywords": query, "page": page}
             if city:
                 params["town"] = city
+            if salary_from and isinstance(salary_from, (int, float)) and salary_from > 0:
+                params["payment_from"] = int(salary_from)
+            if schedule == "remote" or remote:
+                params["remote"] = "1"
+            if employment:
+                params["type_of_work"] = employment
+            if experience:
+                params["experience"] = experience
             try:
                 resp = await self._get(
                     "https://www.superjob.ru/vacancy/search/", params=params
@@ -75,6 +90,20 @@ class SuperJobScraper(BaseScraper):
                 or card.select_one("[data-qa='vacancy-serp__vacancy-address']")
             )
             location = location_elem.get_text(strip=True) if location_elem else ""
+            date_elem = (
+                card.select_one(".f-test-text-company-item-date")
+                or card.select_one("[data-qa='vacancy-serp__vacancy-date']")
+                or card.select_one("time")
+                or card.select_one("[class*='date']")
+            )
+            published_at = ""
+            if date_elem:
+                dt = date_elem.get("datetime") or date_elem.get_text(strip=True)
+                if dt:
+                    published_at = dt
+            if not published_at:
+                from datetime import datetime
+                published_at = datetime.utcnow().isoformat()
             return self._vacancy_stub(
                 source_id=source_id,
                 title=title,
@@ -82,6 +111,7 @@ class SuperJobScraper(BaseScraper):
                 company=company,
                 salary=salary,
                 location=location,
+                published_at=published_at,
             )
         except Exception as exc:
             logger.warning("[superjob] parse card error: %s", exc)

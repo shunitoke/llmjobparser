@@ -14,14 +14,26 @@ class RabotaScraper(BaseScraper):
     base_url = "https://www.rabota.ru"
 
     async def search_vacancies(
-        self, query: str, max_results: int = 20, city: str = ""
+        self, query: str, max_results: int = 20, city: str = "",
+        constraints: Optional[Dict] = None,
     ) -> List[Dict]:
         vacancies: List[Dict] = []
         page = 1
+        c = constraints or {}
+        salary_from = c.get("salary_from")
+        schedule = c.get("schedule")
+        employment = c.get("employment")
+        remote = c.get("remote")
         while len(vacancies) < max_results and page <= 10:
             params: Dict = {"query": query, "page": page}
             if city:
                 params["city"] = city
+            if salary_from and isinstance(salary_from, (int, float)) and salary_from > 0:
+                params["salary_from"] = int(salary_from)
+            if schedule == "remote" or remote:
+                params["remote"] = "1"
+            if employment:
+                params["employment"] = employment
             try:
                 resp = await self._get(
                     "https://www.rabota.ru/vacancy/", params=params
@@ -72,6 +84,7 @@ class RabotaScraper(BaseScraper):
                 or card.select_one("[data-qa='vacancy-employer']")
             )
             company = company_elem.get_text(strip=True) if company_elem else ""
+            company = re.split(r"Проверено|проверен|аккаунт", company, maxsplit=1)[0].strip()
             salary_elem = (
                 card.select_one(".vacancy-preview-card__salary")
                 or card.select_one(".vacancy-card__salary")
@@ -79,11 +92,26 @@ class RabotaScraper(BaseScraper):
             )
             salary = salary_elem.get_text(strip=True) if salary_elem else ""
             location_elem = (
-                card.select_one(".vacancy-preview-card__company-and-location")
+                card.select_one(".vacancy-preview-location__address-text")
+                or card.select_one(".vacancy-preview-card__location")
                 or card.select_one(".vacancy-card__location")
                 or card.select_one("[data-qa='vacancy-address']")
             )
             location = location_elem.get_text(strip=True) if location_elem else ""
+            date_elem = (
+                card.select_one(".vacancy-preview-card__date")
+                or card.select_one("[data-qa='vacancy-date']")
+                or card.select_one("time")
+                or card.select_one("[class*='date']")
+            )
+            published_at = ""
+            if date_elem:
+                dt = date_elem.get("datetime") or date_elem.get_text(strip=True)
+                if dt:
+                    published_at = dt
+            if not published_at:
+                from datetime import datetime
+                published_at = datetime.utcnow().isoformat()
             return self._vacancy_stub(
                 source_id=source_id,
                 title=title,
@@ -91,6 +119,7 @@ class RabotaScraper(BaseScraper):
                 company=company,
                 salary=salary,
                 location=location,
+                published_at=published_at,
             )
         except Exception as exc:
             logger.warning("[rabota] parse card error: %s", exc)

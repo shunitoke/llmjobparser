@@ -2,8 +2,16 @@ import { useRef, useState, useEffect } from 'react';
 import { FileUp, Loader2, X, ChevronDown, ChevronUp, Check, Type } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+interface ParsedData {
+  position: string;
+  skills: string[];
+  experience_summary: string;
+  search_prompt: string;
+}
+
 interface ResumeUploadProps {
-  onParsed: (searchPrompt: string) => void;
+  onParsed: (searchPrompt: string, data?: ParsedData) => void;
+  onClear?: () => void;
 }
 
 const ALLOWED_TYPES = [
@@ -13,14 +21,7 @@ const ALLOWED_TYPES = [
   'text/plain',
 ];
 
-interface ParsedData {
-  position: string;
-  skills: string[];
-  experience_summary: string;
-  search_prompt: string;
-}
-
-export function ResumeUpload({ onParsed }: ResumeUploadProps) {
+export function ResumeUpload({ onParsed, onClear }: ResumeUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [loading, setLoading] = useState(false);
@@ -69,7 +70,7 @@ export function ResumeUpload({ onParsed }: ResumeUploadProps) {
       setParsedData(data);
       setExpanded(false);
       const prompt = data.search_prompt || (data.position ? `Вакансии по резюме: ${data.position}` : '');
-      if (prompt) onParsed(prompt);
+      if (prompt) onParsed(prompt, data);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -98,7 +99,7 @@ export function ResumeUpload({ onParsed }: ResumeUploadProps) {
       setTextMode(false);
       setTextValue('');
       const prompt = data.search_prompt || (data.position ? `Вакансии по резюме: ${data.position}` : '');
-      if (prompt) onParsed(prompt);
+      if (prompt) onParsed(prompt, data);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -113,6 +114,7 @@ export function ResumeUpload({ onParsed }: ResumeUploadProps) {
     setTextMode(false);
     setTextValue('');
     if (inputRef.current) inputRef.current.value = '';
+    onClear?.();
   };
 
   const handleDrop = (e: React.DragEvent) => {

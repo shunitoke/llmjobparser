@@ -91,7 +91,7 @@ export function CandidateList({
               </div>
             </div>
 
-            <div className="max-h-64 space-y-2 overflow-y-auto pr-1 lg:max-h-96">
+            <div className="space-y-2 overflow-y-auto pr-1">
               {items.length === 0 ? (
                 <p className="py-4 text-center text-sm text-muted-foreground">Пока вакансий нет</p>
               ) : (

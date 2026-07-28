@@ -1,4 +1,5 @@
 import { Check, Loader2 } from 'lucide-react';
+import { formatModelLabel } from '@/lib/models';
 import { SearchStatus } from '../types';
 
 interface StatusPanelProps {
@@ -31,8 +32,8 @@ export function StatusPanel({ status }: StatusPanelProps) {
             {status.current_source && (
               <p className="text-xs text-muted-foreground">Источник: {status.current_source}</p>
             )}
-            {status.current_model && status.current_model !== 'GigaChat' && (
-              <p className="text-xs text-muted-foreground">Модель: {status.current_model}</p>
+            {status.current_model && (
+              <p className="text-xs text-muted-foreground">Модель: {formatModelLabel(status.current_model)}</p>
             )}
           </div>
         </div>

@@ -40,6 +40,18 @@ class Base(DeclarativeBase):
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Lightweight migration: add error_message to existing DBs
+        from sqlalchemy import text
+
+        cols = await conn.execute(text("PRAGMA table_info(search_sessions)"))
+        names = {row[1] for row in cols.fetchall()}
+        if "error_message" not in names:
+            await conn.execute(text("ALTER TABLE search_sessions ADD COLUMN error_message TEXT DEFAULT ''"))
+
+        cols = await conn.execute(text("PRAGMA table_info(candidate_jobs)"))
+        names = {row[1] for row in cols.fetchall()}
+        if "published_at" not in names:
+            await conn.execute(text("ALTER TABLE candidate_jobs ADD COLUMN published_at DATETIME"))
 
 
 async def get_db():

@@ -12,8 +12,10 @@ import { ResultsList, ResultsSort, ResultsTab } from '@/components/ResultsList';
 import { SearchForm } from '@/components/SearchForm';
 import { SourceLogos } from '@/components/SourceLogos';
 import { SourceStatusSheet } from '@/components/SourceStatusSheet';
+import { Clippy } from '@/components/Clippy';
 import { StatusPanel } from '@/components/StatusPanel';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { formatModelLabel } from '@/lib/models';
 import { isDesktop, waitForDesktopApi } from '@/lib/desktop';
 import { getJobSource } from '@/lib/sources';
 import { cancelSearch, createSearch, getCandidates, getSearchSession, getSearchStatus } from './api';
@@ -58,6 +60,7 @@ function ModalOverlay({ children, onClose }: { children: React.ReactNode; onClos
 
 function App() {
   const [prompt, setPrompt] = useState('');
+  const [resumeContext, setResumeContext] = useState<string | null>(null);
   const [cityPreset, setCityPreset] = useState('Любой город');
   const [searchMode, setSearchMode] = useState<SearchMode>('ru');
   const [sort, setSort] = useState<ResultsSort>('relevance');
@@ -68,6 +71,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentSession, setCurrentSession] = useState<SearchSession | null>(null);
   const [status, setStatus] = useState<SearchStatus | null>(null);
+  const [lastModelUsed, setLastModelUsed] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [candidateItems, setCandidateItems] = useState<CandidateJob[]>([]);
   const [candidateTotal, setCandidateTotal] = useState(0);
@@ -154,6 +158,7 @@ function App() {
       try {
         const newStatus = await getSearchStatus(sessionId);
         setStatus(newStatus);
+        if (newStatus.current_model) setLastModelUsed(newStatus.current_model);
         if (!showCandidatesAutoRef.current && newStatus.status !== 'generating_queries' && newStatus.status !== 'pending') {
           showCandidatesAutoRef.current = true;
           setShowCandidatesPanel(true);
@@ -179,13 +184,24 @@ function App() {
     [candidateOffset, loadCandidates]
   );
 
+  const buildSearchPrompt = () => {
+    const userText = prompt.trim();
+    if (!userText) return '';
+    if (!resumeContext?.trim()) return userText;
+    const resume = resumeContext.trim();
+    if (userText === resume) return userText;
+    return `${userText}\n\nКонтекст резюме:\n${resume}`;
+  };
+
   const handleSearch = async () => {
-    if (!prompt.trim()) return;
+    const effectivePrompt = buildSearchPrompt();
+    if (!effectivePrompt) return;
     setShowSourceLogos(false);
     setIsLoading(true);
     setError(null);
     setCurrentSession(null);
     setStatus(null);
+    setLastModelUsed('');
     setCandidateItems([]);
     setCandidateTotal(0);
     setCandidateOffset(0);
@@ -195,7 +211,7 @@ function App() {
     setSelectedTab('matched');
     try {
       const cityToSend = cityPreset === 'Любой город' ? '' : cityPreset;
-      const session = await createSearch(prompt, cityToSend, selectedCategories, searchMode);
+      const session = await createSearch(effectivePrompt, cityToSend, selectedCategories, searchMode);
       setCurrentSession(session);
       loadCandidates(session.id, 0);
       pollStatus(session.id);
@@ -253,19 +269,33 @@ function App() {
 
   if (keyConfigured === false) {
     return (
-      <FirstRunKeyPrompt
-        isDark={isDark}
-        onToggleTheme={toggleTheme}
-        onSaved={(resumePrompt) => {
-          setKeyConfigured(true);
-          if (resumePrompt) setPrompt(resumePrompt);
-        }}
-      />
+      <>
+        <FirstRunKeyPrompt
+          isDark={isDark}
+          onToggleTheme={toggleTheme}
+          onSaved={(resumePrompt) => {
+            setKeyConfigured(true);
+            if (resumePrompt) {
+              setResumeContext(resumePrompt);
+              setPrompt(resumePrompt);
+            }
+          }}
+        />
+        <Clippy
+          context={{
+            hasKey: false,
+            prompt: '',
+            hasResume: false,
+            isLoading: false,
+            error: null,
+          }}
+        />
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex min-h-screen flex-col bg-background">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
@@ -353,7 +383,7 @@ function App() {
       <main
         id="main-content"
         tabIndex={-1}
-        className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8"
+        className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 pb-24 sm:px-6 sm:py-12 lg:px-8"
       >
         <div className="mb-8">
           <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
@@ -365,7 +395,19 @@ function App() {
         </div>
 
         <div className="mb-6">
-          <ResumeUpload onParsed={(p) => setPrompt(p)} />
+          <ResumeUpload
+            onParsed={(p, data) => {
+              const parts = [
+                p,
+                data?.position ? `Должность: ${data.position}` : '',
+                data?.skills?.length ? `Навыки: ${data.skills.join(', ')}` : '',
+                data?.experience_summary ? `Опыт: ${data.experience_summary}` : '',
+              ].filter(Boolean);
+              setResumeContext(parts.join('\n'));
+              setPrompt(p);
+            }}
+            onClear={() => setResumeContext(null)}
+          />
         </div>
 
         <SearchForm
@@ -409,6 +451,26 @@ function App() {
 
         {status && !['completed', 'cancelled', 'failed'].includes(status.status) && <StatusPanel status={status} />}
 
+        {status?.status === 'failed' && (
+          <Card className="mb-8 border-destructive/50">
+            <CardContent className="flex items-start gap-2 pt-6 text-sm text-destructive">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <p className="font-medium">Поиск завершился с ошибкой</p>
+                <p className="mt-0.5 text-destructive/80">
+                  {status.error || 'Проверьте API-ключ, выбранную модель и интернет-соединение.'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {status?.status === 'cancelled' && (
+          <p className="mb-8 text-sm text-muted-foreground">Поиск отменён.</p>
+        )}
+
         <ResultsList
           isCompleted={status?.status === 'completed'}
           matchedJobs={matchedJobs}
@@ -418,6 +480,7 @@ function App() {
           selectedTab={selectedTab}
           onSortChange={setSort}
           onTabChange={setSelectedTab}
+          modelUsed={lastModelUsed || status?.current_model || ''}
         />
 
         {activeSessionId && (
@@ -435,12 +498,12 @@ function App() {
         )}
       </main>
 
-      <footer className="border-t border-border/60 py-5">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <footer className="sticky bottom-0 z-20 border-t border-border/60 bg-background/95 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
           <p className="text-xs text-muted-foreground">
             vibejob &mdash; умный поиск работы
           </p>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-end gap-3 text-xs text-muted-foreground">
             <a href="https://t.me/fastmvpbot" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
               <Send className="h-3 w-3" />
               @fastmvpbot
@@ -455,6 +518,21 @@ function App() {
           </div>
         </div>
       </footer>
+
+      <Clippy
+        context={{
+          hasKey: keyConfigured === true,
+          prompt,
+          hasResume: Boolean(resumeContext),
+          isLoading,
+          searchStatus: status?.status,
+          matchedCount: matchedJobs.length,
+          totalJobs: matchedJobs.length + unmatchedJobs.length,
+          modelUsed: formatModelLabel(lastModelUsed || status?.current_model || ''),
+          error,
+          searchMode,
+        }}
+      />
     </div>
   );
 }
