@@ -309,6 +309,19 @@ async def _run_search_inner(
         seen_ids: Set[str] = set()
         candidates_cap = settings.candidates_cap
 
+        async def _search_one(scraper, query: str) -> List[Dict]:
+            try:
+                return await scraper.search_vacancies(
+                    query, max_results=20, city=effective_city,
+                    constraints=constraints,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "[search:%s] %s search failed for '%s': %s",
+                    session_id, scraper.name, query, exc,
+                )
+                return []
+
         try:
             for query in queries:
                 if cancel_event and cancel_event.is_set():
@@ -316,27 +329,13 @@ async def _run_search_inner(
                 session.current_query = query
                 await _commit_with_refresh(db, session)
 
-                for scraper in scrapers:
-                    if cancel_event and cancel_event.is_set():
-                        break
-                    session.current_source = scraper.name
-                    await _commit_with_refresh(db, session)
-
-                    try:
-                        found = await scraper.search_vacancies(
-                            query, max_results=20, city=effective_city,
-                            constraints=constraints,
-                        )
-                    except Exception as exc:
-                        logger.warning(
-                            "[search:%s] %s search failed for '%s': %s",
-                            session_id,
-                            scraper.name,
-                            query,
-                            exc,
-                        )
+                results = await asyncio.gather(
+                    *[_search_one(s, query) for s in scrapers],
+                    return_exceptions=True,
+                )
+                for found in results:
+                    if isinstance(found, Exception) or not isinstance(found, list):
                         continue
-
                     for v in found:
                         vid = v.get("hh_id")
                         if not vid or vid in seen_ids:
@@ -346,12 +345,9 @@ async def _run_search_inner(
                         if len(candidates) >= candidates_cap:
                             break
                     session.candidates_count = len(candidates)
-                    await _commit_with_refresh(db, session)
-
                     if len(candidates) >= candidates_cap:
                         break
-                if len(candidates) >= candidates_cap:
-                    break
+                await _commit_with_refresh(db, session)
         finally:
             await close_scrapers(scrapers)
 
