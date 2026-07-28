@@ -552,6 +552,17 @@ async def _run_search_inner(
                     continue
                 published_at = v.get("published_at")
                 published_dt = _parse_published_at(published_at)
+                salary_info = v.get("salary") or ""
+                location_info = v.get("location") or ""
+                company_info = v.get("company") or ""
+                parts = []
+                if not salary_info:
+                    parts.append("зарплата не указана")
+                elif salary_info.strip().lower() in ("по договоренности", "договорная", "обсуждается"):
+                    parts.append("зп по договоренности")
+                if location_info and effective_city and location_info.lower().strip() not in (effective_city.lower().strip(), "удалённо", "remote", "гибрид"):
+                    parts.append(f"локация «{location_info.strip()}» — не {effective_city}")
+                reason = f"Не прошли предварительный отбор ({'; '.join(parts) if parts else 'нет совпадения по основным параметрам'})"
                 job = Job(
                     session_id=session_id,
                     hh_id=vid or "",
@@ -562,7 +573,7 @@ async def _run_search_inner(
                     url=v.get("url", ""),
                     published_at=published_dt,
                     selected=False,
-                    rejection_reason="Не прошли предварительный отбор",
+                    rejection_reason=reason,
                 )
                 db.add(job)
 
