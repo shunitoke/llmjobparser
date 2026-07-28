@@ -15,7 +15,7 @@ export function JobCard({ job }: JobCardProps) {
   const source = getJobSourceLabel(job);
   const sourceBadgeClass = getJobSourceBadgeClass(job);
   const relativeDate = formatRelativeDate(job.published_at);
-  const hasExtra = Boolean(job.match_reason || job.description);
+  const hasExtra = Boolean(job.match_reason || job.description) || Boolean(job.url);
 
   return (
     <article
@@ -93,29 +93,31 @@ export function JobCard({ job }: JobCardProps) {
               <p className="text-sm text-foreground/80">{job.match_reason}</p>
             )}
 
-            {job.description && (
-              <div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setExpanded((prev) => !prev)}
-                  aria-expanded={expanded}
-                  className="h-auto px-0 py-1 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  {expanded ? 'Скрыть описание' : 'Показать описание'}
-                  <ChevronDown
-                    className={`ml-1 h-3.5 w-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`}
-                    aria-hidden="true"
-                  />
-                </Button>
-                {expanded && (
-                  <p className="mt-2 max-h-60 overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-                    {job.description}
-                  </p>
-                )}
-              </div>
-            )}
+            {job.description ? (
+                <div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setExpanded((prev) => !prev)}
+                    aria-expanded={expanded}
+                    className="h-auto px-0 py-1 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    {expanded ? 'Скрыть описание' : 'Показать описание'}
+                    <ChevronDown
+                      className={`ml-1 h-3.5 w-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                      aria-hidden="true"
+                    />
+                  </Button>
+                  {expanded && (
+                    <p className="mt-2 max-h-60 overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                      {job.description}
+                    </p>
+                  )}
+                </div>
+              ) : job.url ? (
+                <p className="text-xs text-muted-foreground">Описание недоступно</p>
+              ) : null}
           </div>
         )}
       </div>

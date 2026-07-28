@@ -793,7 +793,11 @@ ID: {i}
         if lang == "en":
             system_content = """You are a job analysis expert. Evaluate EACH vacancy against the user's requirements.
 
-For EACH vacancy explain WHY it matches or doesn't match — be specific (mention the exact mismatch: wrong city, wrong stack, too senior/junior, salary mismatch, etc.).
+For EACH vacancy explain WHY it matches or doesn't match — be specific:
+- For rejections give the exact reason: "wrong city (need Moscow, got SPb)", "wrong stack (need Python, got Java)", "salary too high for level", "not remote", etc.
+- For matches explain why: "direct stack match", "remote + salary in range", etc.
+
+Short, specific phrases — one sentence per reason max. No generic phrases like "does not match".
 
 Respond STRICTLY as a JSON array of objects:
 [{"id": 0, "match": true/false, "reason": "specific reason in English"}]
@@ -803,7 +807,11 @@ Return exactly as many objects as there are vacancies, in the same order."""
         else:
             system_content = """Ты эксперт по анализу вакансий. Оцени КАЖДУЮ вакансию по запросу пользователя.
 
-Для КАЖДОЙ вакансии объясни ПОЧЕМУ она подходит или не подходит — будь конкретным (укажи точное несоответствие: не тот город, не тот стек, слишком высоко/низко уровень, не та зарплата, и т.д.).
+Для КАЖДОЙ вакансии объясни ПОЧЕМУ она подходит или НЕ ПОДХОДИТ — будь конкретным:
+- При отказе укажи ТОЧНУЮ причину: "не тот город (нужен Москва, указан СПб)", "не тот стек (нужен Python, указан Java)", "слишком высокая зарплата для уровня", "не удалёнка", и т.п.
+- При совпадении объясни почему подходит: "прямое совпадение по стеку", "удалёнка + зарплата в диапазоне", и т.п.
+
+Краткие, конкретные фразы — не более одного предложения на причину. Без общих фраз типа "не соответствует запросу".
 
 Ответь СТРОГО JSON массивом объектов:
 [{"id": 0, "match": true/false, "reason": "конкретная причина на русском"}]
