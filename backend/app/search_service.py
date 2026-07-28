@@ -477,9 +477,10 @@ async def _run_search_inner(
 
         # Persist jobs
         try:
-            for v in selected_candidates:
+            for v in candidates:
                 vid = v.get("hh_id")
-                detail = details.get(vid, {})
+                is_selected = vid in selected_set
+                detail = details.get(vid, {}) if is_selected else {}
                 published_at = v.get("published_at")
                 published_dt = _parse_published_at(published_at)
                 job = Job(
@@ -494,8 +495,10 @@ async def _run_search_inner(
                     description=detail.get("description", v.get("description", "")),
                     url=v.get("url", ""),
                     published_at=published_dt,
+                    selected=is_selected,
                 )
                 db.add(job)
+            session.selected_count = len(selected_set)
             await _commit_with_refresh(db, session)
         except Exception as exc:
             logger.exception("[search:%s] failed to save jobs: %s", session_id, exc)
