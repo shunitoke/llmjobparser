@@ -13,6 +13,7 @@ export interface Job {
   source?: string | null;
   is_match: boolean | null;
   match_reason: string | null;
+  rejection_reason: string | null;
 }
 
 export interface SearchSession {

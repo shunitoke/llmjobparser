@@ -15,7 +15,7 @@ export function JobCard({ job }: JobCardProps) {
   const source = getJobSourceLabel(job);
   const sourceBadgeClass = getJobSourceBadgeClass(job);
   const relativeDate = formatRelativeDate(job.published_at);
-  const hasExtra = Boolean(job.match_reason || job.description) || Boolean(job.url);
+  const hasExtra = Boolean(job.match_reason || job.description || job.rejection_reason) || Boolean(job.url);
 
   return (
     <article
@@ -91,6 +91,9 @@ export function JobCard({ job }: JobCardProps) {
           <div className="mt-3 space-y-2">
             {job.match_reason && (
               <p className="text-sm text-foreground/80">{job.match_reason}</p>
+            )}
+            {job.rejection_reason && (
+              <p className="text-sm text-foreground/50 italic">{job.rejection_reason}</p>
             )}
 
             {job.description ? (

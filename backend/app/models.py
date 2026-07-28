@@ -70,6 +70,7 @@ class Job(Base):
 
     is_match = Column(Boolean, default=None)
     match_reason = Column(Text)
+    rejection_reason = Column(Text)
     analyzed_at = Column(DateTime)
 
     session = relationship("SearchSession", back_populates="jobs")

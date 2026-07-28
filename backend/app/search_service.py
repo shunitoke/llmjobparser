@@ -475,14 +475,17 @@ async def _run_search_inner(
             await _commit_with_refresh(db, session)
             return
 
-        # Persist jobs
+        # Persist jobs (both selected and rejected candidates)
         try:
             for v in candidates:
                 vid = v.get("hh_id")
                 is_selected = vid in selected_set
-                detail = details.get(vid, {}) if is_selected else {}
+                detail = details.get(vid, {})
                 published_at = v.get("published_at")
                 published_dt = _parse_published_at(published_at)
+                job_reason = None
+                if not is_selected:
+                    job_reason = "Не прошли предварительный отбор (не попали в шортлист)"
                 job = Job(
                     session_id=session_id,
                     hh_id=vid or "",
@@ -496,6 +499,7 @@ async def _run_search_inner(
                     url=v.get("url", ""),
                     published_at=published_dt,
                     selected=is_selected,
+                    rejection_reason=job_reason,
                 )
                 db.add(job)
             session.selected_count = len(selected_set)

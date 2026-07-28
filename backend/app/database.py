@@ -53,6 +53,11 @@ async def init_db():
         if "published_at" not in names:
             await conn.execute(text("ALTER TABLE candidate_jobs ADD COLUMN published_at DATETIME"))
 
+        cols = await conn.execute(text("PRAGMA table_info(jobs)"))
+        names = {row[1] for row in cols.fetchall()}
+        if "rejection_reason" not in names:
+            await conn.execute(text("ALTER TABLE jobs ADD COLUMN rejection_reason TEXT DEFAULT ''"))
+
 
 async def get_db():
     async with async_session() as session:
