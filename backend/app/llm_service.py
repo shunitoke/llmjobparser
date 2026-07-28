@@ -867,16 +867,18 @@ Return exactly as many objects as there are vacancies, in the same order."""
         async def pick_from_chunk(chunk: List[Dict], k: int) -> List[str]:
             if lang == "en":
                 system_content = (
-                    "You are a job selection assistant. Based on the user's request, select the most suitable vacancies from the list. "
-                    "Return STRICTLY a JSON array of IDs (first field before '|'). No other text."
+                    "You are a job selection assistant. Evaluate EACH vacancy and explain why it's selected or rejected. "
+                    "Respond STRICTLY as a JSON array of objects with fields id (first field before '|'), selected (true/false), and reason (1 sentence): "
+                    '[{"id": "123", "selected": true, "reason": "direct stack match"}, {"id": "456", "selected": false, "reason": "wrong city"}]'
                 )
-                user_content = f"Request: {user_prompt}{city_sel}\n\nSelect up to {k} IDs from the list below:\n\n{compact(chunk)}"
+                user_content = f"Request: {user_prompt}{city_sel}\n\nEvaluate all vacancies:\n\n{compact(chunk)}"
             else:
                 system_content = (
-                    "Ты помощник по отбору вакансий. По запросу пользователя выбери наиболее подходящие вакансии из списка. "
-                    "Верни СТРОГО JSON массив ID (первое поле до '|'). Никакого текста."
+                    "Ты помощник по отбору вакансий. Оцени КАЖДУЮ вакансию и объясни почему ты её выбрал или отклонил. "
+                    "Ответь СТРОГО JSON массивом объектов с полями id (первое поле до '|'), selected (true/false) и reason (1 предложение): "
+                    '[{"id": "123", "selected": true, "reason": "прямое совпадение по стеку"}, {"id": "456", "selected": false, "reason": "не тот город"}]'
                 )
-                user_content = f"Запрос: {user_prompt}{city_sel}\n\nВыбери до {k} ID из списка ниже:\n\n{compact(chunk)}"
+                user_content = f"Запрос: {user_prompt}{city_sel}\n\nОцени все вакансии:\n\n{compact(chunk)}"
 
             messages = [
                 {"role": "system", "content": system_content},
@@ -890,11 +892,13 @@ Return exactly as many objects as there are vacancies, in the same order."""
                     txt = txt.rsplit("```", 1)[0]
                 data = json.loads(txt)
                 if isinstance(data, list):
-                    out = []
+                    selected: List[str] = []
                     for x in data:
-                        if isinstance(x, str) and x.strip():
-                            out.append(x.strip())
-                    return out
+                        if isinstance(x, dict) and x.get("selected"):
+                            cid = (x.get("id") or "").strip()
+                            if cid:
+                                selected.append(cid)
+                    return selected
             except Exception:
                 return []
             return []

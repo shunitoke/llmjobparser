@@ -261,7 +261,7 @@ async def _run_search_inner(
         queries: List[str] = []
         try:
             constraints, queries = await asyncio.wait_for(
-                asyncio.gather(_extract(), _queries()), timeout=150.0
+                asyncio.gather(_extract(), _queries()), timeout=300.0
             )
             logger.info("[search:%s] extracted constraints: %s", session_id, constraints)
         except asyncio.TimeoutError:
@@ -475,17 +475,61 @@ async def _run_search_inner(
             await _commit_with_refresh(db, session)
             return
 
-        # Persist jobs (both selected and rejected candidates)
+        selected_candidates = [v for v in candidates if v.get("hh_id") in selected_set]
+        details: Dict[str, Dict[str, Any]] = {}
+        semaphore = asyncio.Semaphore(8)
+
+        scraper_map = {
+            "hh": HHScraper(),
+            "rabota": RabotaScraper(),
+            "superjob": SuperJobScraper(),
+            "remoteok": RemoteOKScraper(),
+            "weworkremotely": WeWorkRemotelyScraper(),
+            "4dayweek": FourDayWeekScraper(),
+            "djinni": DjinniScraper(),
+            "telegram": TelegramScraper(),
+        }
+        detail_scrapers: Dict[str, BaseScraper] = {}
+
+        async def fetch_details(v: Dict) -> None:
+            vid = v.get("hh_id")
+            url = v.get("url")
+            if not vid or not url:
+                return
+            source = v.get("source", "")
+            scraper = detail_scrapers.get(source)
+            if scraper is None:
+                scraper = scraper_map.get(source)
+                if scraper is None:
+                    return
+                detail_scrapers[source] = scraper
+            async with semaphore:
+                try:
+                    details[vid] = await scraper.get_vacancy_details(url) or {}
+                except Exception as exc:
+                    logger.warning("[search:%s] details %s failed: %s", session_id, vid, exc)
+                    details[vid] = {}
+
         try:
-            for v in candidates:
+            await asyncio.gather(*[fetch_details(v) for v in selected_candidates], return_exceptions=True)
+        finally:
+            await close_scrapers(list(detail_scrapers.values()))
+
+        session.scraped_count = len(details)
+        await _commit_with_refresh(db, session)
+
+        if cancel_event and cancel_event.is_set():
+            session.status = "cancelled"
+            await _commit_with_refresh(db, session)
+            return
+
+        # Persist jobs: selected (with details) + non-selected (rejection_reason only)
+        try:
+            for v in selected_candidates:
                 vid = v.get("hh_id")
-                is_selected = vid in selected_set
                 detail = details.get(vid, {})
                 published_at = v.get("published_at")
                 published_dt = _parse_published_at(published_at)
-                job_reason = None
-                if not is_selected:
-                    job_reason = "Не прошли предварительный отбор (не попали в шортлист)"
                 job = Job(
                     session_id=session_id,
                     hh_id=vid or "",
@@ -498,10 +542,30 @@ async def _run_search_inner(
                     description=detail.get("description", v.get("description", "")),
                     url=v.get("url", ""),
                     published_at=published_dt,
-                    selected=is_selected,
-                    rejection_reason=job_reason,
+                    selected=True,
                 )
                 db.add(job)
+
+            for v in candidates:
+                vid = v.get("hh_id")
+                if vid in selected_set:
+                    continue
+                published_at = v.get("published_at")
+                published_dt = _parse_published_at(published_at)
+                job = Job(
+                    session_id=session_id,
+                    hh_id=vid or "",
+                    title=v.get("title", ""),
+                    company=v.get("company", ""),
+                    salary=v.get("salary", ""),
+                    location=v.get("location", ""),
+                    url=v.get("url", ""),
+                    published_at=published_dt,
+                    selected=False,
+                    rejection_reason="Не прошли предварительный отбор",
+                )
+                db.add(job)
+
             session.selected_count = len(selected_set)
             await _commit_with_refresh(db, session)
         except Exception as exc:
@@ -548,6 +612,8 @@ async def _run_search_inner(
                         job.is_match = is_match
                         job.match_reason = reason
                         job.analyzed_at = datetime.utcnow()
+                        if not is_match and job.rejection_reason:
+                            job.match_reason = job.rejection_reason
                     await db.commit()
                 except Exception as exc:
                     logger.warning("[search:%s] batch analyze failed: %s", session_id, exc)
