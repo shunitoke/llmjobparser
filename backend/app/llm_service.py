@@ -797,6 +797,8 @@ For EACH vacancy explain WHY it matches or doesn't match — be specific:
 - For rejections give the exact reason: "wrong city (need Moscow, got SPb)", "wrong stack (need Python, got Java)", "salary too high for level", "not remote", etc.
 - For matches explain why: "direct stack match", "remote + salary in range", etc.
 
+IMPORTANT about salary: compare ONLY with what is shown in the vacancy's "Salary" field. If the user requires 200k+ but the vacancy shows 75k — that is NOT a match. Do not invent or inflate numbers. If salary is not listed — treat it as "not specified", not as matching the requirement.
+
 Short, specific phrases — one sentence per reason max. No generic phrases like "does not match".
 
 Respond STRICTLY as a JSON array of objects:
@@ -810,6 +812,8 @@ Return exactly as many objects as there are vacancies, in the same order."""
 Для КАЖДОЙ вакансии объясни ПОЧЕМУ она подходит или НЕ ПОДХОДИТ — будь конкретным:
 - При отказе укажи ТОЧНУЮ причину: "не тот город (нужен Москва, указан СПб)", "не тот стек (нужен Python, указан Java)", "слишком высокая зарплата для уровня", "не удалёнка", и т.п.
 - При совпадении объясни почему подходит: "прямое совпадение по стеку", "удалёнка + зарплата в диапазоне", и т.п.
+
+ВАЖНО о зарплате: сравнивай ТОЛЬКО с тем, что УКАЗАНО в поле «Зарплата» вакансии. Если пользователь запросил зарплату от 200к, а в вакансии указана 75к — это НЕ совпадение. Не придумывай и не завышай цифры. Если зарплата не указана — считай её «не указана», а не соответствующей запросу.
 
 Краткие, конкретные фразы — не более одного предложения на причину. Без общих фраз типа "не соответствует запросу".
 

@@ -378,6 +378,9 @@ async def _run_search_inner(
         except Exception as exc:
             logger.exception("[search:%s] failed to save candidates: %s", session_id, exc)
             session.status = "failed"
+            session.error_message = sanitize_description(
+                f"Ошибка сохранения кандидатов: {type(exc).__name__}: {str(exc)[:300]}"
+            )
             await _commit_with_refresh(db, session)
             return
 
@@ -475,54 +478,6 @@ async def _run_search_inner(
             await _commit_with_refresh(db, session)
             return
 
-        selected_candidates = [v for v in candidates if v.get("hh_id") in selected_set]
-        details: Dict[str, Dict[str, Any]] = {}
-        semaphore = asyncio.Semaphore(8)
-
-        scraper_map = {
-            "hh": HHScraper(),
-            "rabota": RabotaScraper(),
-            "superjob": SuperJobScraper(),
-            "remoteok": RemoteOKScraper(),
-            "weworkremotely": WeWorkRemotelyScraper(),
-            "4dayweek": FourDayWeekScraper(),
-            "djinni": DjinniScraper(),
-            "telegram": TelegramScraper(),
-        }
-        detail_scrapers: Dict[str, BaseScraper] = {}
-
-        async def fetch_details(v: Dict) -> None:
-            vid = v.get("hh_id")
-            url = v.get("url")
-            if not vid or not url:
-                return
-            source = v.get("source", "")
-            scraper = detail_scrapers.get(source)
-            if scraper is None:
-                scraper = scraper_map.get(source)
-                if scraper is None:
-                    return
-                detail_scrapers[source] = scraper
-            async with semaphore:
-                try:
-                    details[vid] = await scraper.get_vacancy_details(url) or {}
-                except Exception as exc:
-                    logger.warning("[search:%s] details %s failed: %s", session_id, vid, exc)
-                    details[vid] = {}
-
-        try:
-            await asyncio.gather(*[fetch_details(v) for v in selected_candidates], return_exceptions=True)
-        finally:
-            await close_scrapers(list(detail_scrapers.values()))
-
-        session.scraped_count = len(details)
-        await _commit_with_refresh(db, session)
-
-        if cancel_event and cancel_event.is_set():
-            session.status = "cancelled"
-            await _commit_with_refresh(db, session)
-            return
-
         # Persist jobs: selected (with details) + non-selected (rejection_reason only)
         try:
             for v in selected_candidates:
@@ -542,7 +497,6 @@ async def _run_search_inner(
                     description=detail.get("description", v.get("description", "")),
                     url=v.get("url", ""),
                     published_at=published_dt,
-                    selected=True,
                 )
                 db.add(job)
 
@@ -563,6 +517,21 @@ async def _run_search_inner(
                 if location_info and effective_city and location_info.lower().strip() not in (effective_city.lower().strip(), "удалённо", "remote", "гибрид"):
                     parts.append(f"локация «{location_info.strip()}» — не {effective_city}")
                 reason = f"Не прошли предварительный отбор ({'; '.join(parts) if parts else 'нет совпадения по основным параметрам'})"
+
+                if vid:
+                    try:
+                        cand_result = await db.execute(
+                            select(CandidateJob).where(
+                                CandidateJob.session_id == session_id,
+                                CandidateJob.hh_id == vid,
+                            )
+                        )
+                        cand = cand_result.scalar_one_or_none()
+                        if cand:
+                            cand.rejection_reason = reason
+                    except Exception:
+                        pass
+
                 job = Job(
                     session_id=session_id,
                     hh_id=vid or "",
@@ -572,7 +541,6 @@ async def _run_search_inner(
                     location=v.get("location", ""),
                     url=v.get("url", ""),
                     published_at=published_dt,
-                    selected=False,
                     rejection_reason=reason,
                 )
                 db.add(job)
@@ -582,6 +550,9 @@ async def _run_search_inner(
         except Exception as exc:
             logger.exception("[search:%s] failed to save jobs: %s", session_id, exc)
             session.status = "failed"
+            session.error_message = sanitize_description(
+                f"Ошибка сохранения вакансий: {type(exc).__name__}: {str(exc)[:300]}"
+            )
             await _commit_with_refresh(db, session)
             return
 

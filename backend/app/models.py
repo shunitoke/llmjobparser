@@ -40,6 +40,7 @@ class CandidateJob(Base):
     category = Column(String(100))
     published_at = Column(DateTime)
     selected = Column(Boolean, default=False)
+    rejection_reason = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     session = relationship("SearchSession", back_populates="candidates")

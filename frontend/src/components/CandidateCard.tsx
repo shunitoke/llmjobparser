@@ -59,6 +59,9 @@ export const CandidateCard = memo(function CandidateCard({ item }: CandidateCard
             )}
             {item.salary && <span className="font-medium text-foreground">{item.salary}</span>}
           </div>
+          {!item.selected && item.rejection_reason && (
+            <p className="mt-1.5 text-xs text-destructive/80">{item.rejection_reason}</p>
+          )}
         </div>
       </div>
     </article>

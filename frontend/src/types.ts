@@ -54,6 +54,7 @@ export interface CandidateJob {
   category: string | null;
   published_at?: string | null;
   selected: boolean;
+  rejection_reason?: string | null;
   created_at: string;
 }
 

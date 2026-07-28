@@ -41,6 +41,7 @@ class CandidateJobResponse(BaseModel):
     category: Optional[str]
     published_at: Optional[datetime] = None
     selected: bool
+    rejection_reason: Optional[str] = None
     created_at: datetime
 
     class Config:
