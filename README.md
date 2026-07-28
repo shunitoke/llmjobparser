@@ -3,7 +3,7 @@
 <p align="center">
   🔍 AI-поиск работы — опиши мечту на человеческом языке, получи десятки вариантов из разных источников по всему миру.<br/>
   <a href="https://github.com/shunitoke/llmjobparser/releases/latest">⬇️ Скачать для Windows</a> ·
-  <a href="https://github.com/shunitoke/llmjobparser/actions/workflows/build-desktop-linux.yml">🐧 Билд для Linux</a>
+  <a href="https://github.com/shunitoke/llmjobparser/releases/latest">🐧 Скачать для Linux</a>
 </p>
 
 <p align="center">
@@ -33,19 +33,17 @@
 
 **Windows** — скачай свежий релиз:
 
-[**vibejob.exe** (27 МБ)](https://github.com/shunitoke/llmjobparser/releases/latest)
+[**vibejob.exe** (28 МБ)](https://github.com/shunitoke/llmjobparser/releases/latest)
 
 Установка не нужна. Запусти — и сразу понятно что делать.
 
-**Linux** — готовый бинарник собирается в CI. Забери артефакт `vibejob-linux-x64` из [последнего успешного прогона](https://github.com/shunitoke/llmjobparser/actions/workflows/build-desktop-linux.yml) (нужен вход в GitHub) или собери сам:
+**Linux** — скачай бинарник из [релиза](https://github.com/shunitoke/llmjobparser/releases/latest) (`vibejob-linux-x64`). Установка не нужна, но нужны GTK/WebKit библиотеки:
 
 ```bash
-sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev \
-  libgirepository1.0-dev gir1.2-gtk-3.0 gir1.2-webkit2-4.1 pkg-config
-bash desktop/build-desktop.sh   # -> desktop/dist/vibejob
+sudo apt-get install -y libgtk-3-0 libwebkit2gtk-4.1
+chmod +x vibejob-linux-x64
+./vibejob-linux-x64
 ```
-
-Для запуска на целевой машине нужны GTK/WebKit библиотеки (`libgtk-3-0`, `libwebkit2gtk-4.1`).
 
 ### 🚀 Первый запуск
 
