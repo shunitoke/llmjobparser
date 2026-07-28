@@ -312,7 +312,7 @@ async def _run_search_inner(
         async def _search_one(scraper, query: str) -> List[Dict]:
             try:
                 return await scraper.search_vacancies(
-                    query, max_results=20, city=effective_city,
+                    query, max_results=30, city=effective_city,
                     constraints=constraints,
                 )
             except Exception as exc:

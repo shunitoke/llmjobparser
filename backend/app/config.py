@@ -17,8 +17,8 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-3-5-haiku-20241022"
     deepseek_model: str = "deepseek-v4-flash"
     gemini_model: str = "gemini-2.0-flash"
-    candidates_cap: int = Field(default=500, ge=1, le=2_000)
-    selected_cap: int = Field(default=100, ge=1, le=500)
+    candidates_cap: int = Field(default=1000, ge=1, le=2_000)
+    selected_cap: int = Field(default=150, ge=1, le=500)
     telegram_channels: str = (
         "spb_rabota:vacancy,goodpeople_pro:vacancy,time2find:vacancy,"
         "polyaluzjob:freelance,zerocode_jobs:freelance"
