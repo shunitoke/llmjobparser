@@ -516,36 +516,38 @@ async def _run_search_inner(
         session.status = "analyzing"
         await _commit_with_refresh(db, session)
 
-        analyze_semaphore = asyncio.Semaphore(3)
-
-        async def analyze_job(job: Job) -> None:
-            async with analyze_semaphore:
-                try:
-                    is_match, reason = await llm.analyze_vacancy(
-                        session.user_prompt,
-                        {
-                            "title": job.title,
-                            "company": job.company,
-                            "salary": job.salary,
-                            "location": job.location,
-                            "experience": job.experience,
-                            "employment_type": job.employment_type,
-                            "description": job.description,
-                        },
-                        city=effective_city,
-                        lang=lang,
-                    )
-                    job.is_match = is_match
-                    job.match_reason = reason
-                    job.analyzed_at = datetime.utcnow()
-                    await db.commit()
-                except Exception as exc:
-                    logger.warning("[search:%s] analyze job %s failed: %s", session_id, job.id, exc)
+        BATCH_SIZE = 5
 
         try:
             result = await db.execute(select(Job).where(Job.session_id == session_id))
             jobs = result.scalars().all()
-            await asyncio.gather(*[analyze_job(job) for job in jobs], return_exceptions=True)
+            for i in range(0, len(jobs), BATCH_SIZE):
+                if cancel_event and cancel_event.is_set():
+                    break
+                batch = jobs[i:i + BATCH_SIZE]
+                vacancies = [
+                    {
+                        "title": j.title,
+                        "company": j.company,
+                        "salary": j.salary,
+                        "location": j.location,
+                        "experience": j.experience,
+                        "employment_type": j.employment_type,
+                        "description": j.description,
+                    }
+                    for j in batch
+                ]
+                try:
+                    results = await llm.analyze_vacancies_batch(
+                        session.user_prompt, vacancies, city=effective_city, lang=lang,
+                    )
+                    for job, (is_match, reason) in zip(batch, results):
+                        job.is_match = is_match
+                        job.match_reason = reason
+                        job.analyzed_at = datetime.utcnow()
+                    await db.commit()
+                except Exception as exc:
+                    logger.warning("[search:%s] batch analyze failed: %s", session_id, exc)
         except Exception as exc:
             logger.exception("[search:%s] analyze stage failed: %s", session_id, exc)
 

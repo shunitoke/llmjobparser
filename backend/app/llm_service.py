@@ -767,6 +767,77 @@ Respond STRICTLY in JSON format:
         except json.JSONDecodeError:
             return False, "Ошибка анализа"
 
+    async def analyze_vacancies_batch(self, user_prompt: str, vacancies: List[Dict], lang: str = "ru", city: str = "") -> List[Tuple[bool, str]]:
+        """Analyze multiple vacancies in one LLM call for speed."""
+        if not vacancies:
+            return []
+        if len(vacancies) == 1:
+            r = await self.analyze_vacancy(user_prompt, vacancies[0], lang=lang, city=city)
+            return [r]
+
+        city_req = f"\nВАЖНО: пользователь хочет работу в городе {city}. Учитывай локацию в первую очередь." if city and lang != "en" else (f"\nIMPORTANT: user wants a job in {city}. Prioritize location." if city else "")
+
+        items_text = ""
+        for i, v in enumerate(vacancies):
+            desc = sanitize_description(v.get("description", ""))
+            items_text += f"""
+--- ВАКАНСИЯ {i + 1} ---
+ID: {i}
+Название: {v.get('title', '')}
+Компания: {v.get('company', '')}
+Зарплата: {v.get('salary', 'не указана')}
+Локация: {v.get('location', '')}
+Описание: {desc[:1500]}
+"""
+
+        if lang == "en":
+            system_content = """You are a job analysis expert. Evaluate EACH vacancy against the user's requirements.
+
+For EACH vacancy explain WHY it matches or doesn't match — be specific (mention the exact mismatch: wrong city, wrong stack, too senior/junior, salary mismatch, etc.).
+
+Respond STRICTLY as a JSON array of objects:
+[{"id": 0, "match": true/false, "reason": "specific reason in English"}]
+
+Return exactly as many objects as there are vacancies, in the same order."""
+            user_content = f"User request: {user_prompt}{city_req}\n\nVacancies:\n{items_text}"
+        else:
+            system_content = """Ты эксперт по анализу вакансий. Оцени КАЖДУЮ вакансию по запросу пользователя.
+
+Для КАЖДОЙ вакансии объясни ПОЧЕМУ она подходит или не подходит — будь конкретным (укажи точное несоответствие: не тот город, не тот стек, слишком высоко/низко уровень, не та зарплата, и т.д.).
+
+Ответь СТРОГО JSON массивом объектов:
+[{"id": 0, "match": true/false, "reason": "конкретная причина на русском"}]
+
+Верни ровно столько объектов, сколько вакансий, в том же порядке."""
+            user_content = f"Запрос пользователя: {user_prompt}{city_req}\n\nВакансии:\n{items_text}"
+
+        messages = [
+            {"role": "system", "content": system_content},
+            {"role": "user", "content": user_content}
+        ]
+
+        result = await self._call_llm(messages, temperature=0.3)
+
+        try:
+            result = result.strip()
+            if result.startswith("```"):
+                result = result.split("\n", 1)[1]
+                result = result.rsplit("```", 1)[0]
+            data = json.loads(result)
+            if not isinstance(data, list):
+                return [(False, "Ошибка анализа")] * len(vacancies)
+            out: List[Tuple[bool, str]] = []
+            for item in data:
+                if isinstance(item, dict):
+                    out.append((item.get("match", False), sanitize_description(item.get("reason", ""))))
+                else:
+                    out.append((False, "Ошибка анализа"))
+            while len(out) < len(vacancies):
+                out.append((False, "Ошибка анализа"))
+            return out[:len(vacancies)]
+        except json.JSONDecodeError:
+            return [(False, "Ошибка анализа")] * len(vacancies)
+
     async def select_candidate_ids(self, user_prompt: str, candidates: List[Dict], target: int = 100, lang: str = "ru", city: str = "") -> List[str]:
         """Select best candidate vacancy IDs based on title-card info to reduce deep scraping."""
         city_sel = f" Город: {city}." if city and lang != "en" else (f" City: {city}." if city else "")
