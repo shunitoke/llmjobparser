@@ -171,8 +171,10 @@ function App() {
           setCurrentSession(session);
           setIsLoading(false);
           setSelectedTab('matched');
+          loadCandidates(sessionId, 0);
         } else if (newStatus.status === 'cancelled' || newStatus.status === 'failed') {
           setIsLoading(false);
+          if (sessionId) loadCandidates(sessionId, 0);
         } else {
           setTimeout(() => pollStatus(sessionId), 2000);
         }

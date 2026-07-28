@@ -421,6 +421,38 @@ async def _run_search_inner(
         except Exception as exc:
             logger.warning("[search:%s] failed to mark selected candidates: %s", session_id, exc)
 
+        try:
+            non_selected = [v for v in candidates if v.get("hh_id") not in selected_set]
+            for v in non_selected:
+                vid = v.get("hh_id")
+                if not vid:
+                    continue
+                salary_info = v.get("salary") or ""
+                location_info = v.get("location") or ""
+                parts = []
+                if not salary_info:
+                    parts.append("зарплата не указана")
+                elif salary_info.strip().lower() in ("по договоренности", "договорная", "обсуждается"):
+                    parts.append("зп по договоренности")
+                if location_info and effective_city and location_info.lower().strip() not in (effective_city.lower().strip(), "удалённо", "remote", "гибрид"):
+                    parts.append(f"локация «{location_info.strip()}» — не {effective_city}")
+                reason = f"Не прошли отбор ({'; '.join(parts) if parts else 'нет совпадения'})"
+                try:
+                    cand_result = await db.execute(
+                        select(CandidateJob).where(
+                            CandidateJob.session_id == session_id,
+                            CandidateJob.hh_id == vid,
+                        )
+                    )
+                    cand = cand_result.scalar_one_or_none()
+                    if cand:
+                        cand.rejection_reason = reason
+                except Exception:
+                    pass
+            await db.commit()
+        except Exception as exc:
+            logger.warning("[search:%s] failed to write rejection reasons: %s", session_id, exc)
+
         if cancel_event and cancel_event.is_set():
             session.status = "cancelled"
             await _commit_with_refresh(db, session)
