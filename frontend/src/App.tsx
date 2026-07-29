@@ -135,12 +135,12 @@ function App() {
   }, []);
 
   const loadCandidates = useCallback(
-    async (sessionId: number, offset: number) => {
+    async (sessionId: number, offset: number, force = false) => {
       try {
         const res = await getCandidates(sessionId, offset, candidateLimit, null, null, 'created_at');
-        const ids = res.items.map((i: { id: number }) => i.id).join(',');
-        if (ids === candidateIdsRef.current && offset === candidateOffset) return;
-        candidateIdsRef.current = ids;
+        const snapshot = res.items.map((i) => `${i.id}:${i.rejection_reason ?? ''}:${i.selected}`).join(',');
+        if (!force && snapshot === candidateIdsRef.current && offset === candidateOffset) return;
+        candidateIdsRef.current = snapshot;
         setCandidateItems(res.items);
         setCandidateTotal(res.total);
         setCandidateOffset(res.offset);
@@ -171,10 +171,10 @@ function App() {
           setCurrentSession(session);
           setIsLoading(false);
           setSelectedTab('matched');
-          loadCandidates(sessionId, 0);
+          loadCandidates(sessionId, 0, true);
         } else if (newStatus.status === 'cancelled' || newStatus.status === 'failed') {
           setIsLoading(false);
-          if (sessionId) loadCandidates(sessionId, 0);
+          if (sessionId) loadCandidates(sessionId, 0, true);
         } else {
           setTimeout(() => pollStatus(sessionId), 2000);
         }
