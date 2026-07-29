@@ -434,8 +434,12 @@ async def _run_search_inner(
                     parts.append("зарплата не указана")
                 elif salary_info.strip().lower() in ("по договоренности", "договорная", "обсуждается"):
                     parts.append("зп по договоренности")
-                if location_info and effective_city and location_info.lower().strip() not in (effective_city.lower().strip(), "удалённо", "remote", "гибрид"):
-                    parts.append(f"локация «{location_info.strip()}» — не {effective_city}")
+                if location_info and effective_city:
+                    loc_lower = location_info.lower().strip()
+                    city_lower = effective_city.lower().strip()
+                    loc_is_city = loc_lower == city_lower or loc_lower.startswith(city_lower + ",") or loc_lower.startswith(city_lower + " ")
+                    if not loc_is_city and loc_lower not in ("удалённо", "remote", "гибрид"):
+                        parts.append(f"локация «{location_info.strip()}» — не {effective_city}")
                 reason = f"Не прошли отбор ({'; '.join(parts) if parts else 'нет совпадения'})"
                 try:
                     cand_result = await db.execute(
@@ -546,8 +550,12 @@ async def _run_search_inner(
                     parts.append("зарплата не указана")
                 elif salary_info.strip().lower() in ("по договоренности", "договорная", "обсуждается"):
                     parts.append("зп по договоренности")
-                if location_info and effective_city and location_info.lower().strip() not in (effective_city.lower().strip(), "удалённо", "remote", "гибрид"):
-                    parts.append(f"локация «{location_info.strip()}» — не {effective_city}")
+                if location_info and effective_city:
+                    loc_lower = location_info.lower().strip()
+                    city_lower = effective_city.lower().strip()
+                    loc_is_city = loc_lower == city_lower or loc_lower.startswith(city_lower + ",") or loc_lower.startswith(city_lower + " ")
+                    if not loc_is_city and loc_lower not in ("удалённо", "remote", "гибрид"):
+                        parts.append(f"локация «{location_info.strip()}» — не {effective_city}")
                 reason = f"Не прошли предварительный отбор ({'; '.join(parts) if parts else 'нет совпадения по основным параметрам'})"
 
                 if vid:
