@@ -56,8 +56,7 @@ class WeWorkRemotelyScraper(BaseScraper):
             if entry.get("published_parsed"):
                 published_at = datetime(*entry.published_parsed[:6]).isoformat()
             if not published_at:
-                from datetime import datetime
-                published_at = datetime.utcnow().isoformat()
+                published_at = None
             return self._vacancy_stub(
                 source_id=source_id,
                 title=title,

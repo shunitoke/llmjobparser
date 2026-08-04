@@ -110,8 +110,7 @@ class RabotaScraper(BaseScraper):
                 if dt:
                     published_at = dt
             if not published_at:
-                from datetime import datetime
-                published_at = datetime.utcnow().isoformat()
+                published_at = None
             return self._vacancy_stub(
                 source_id=source_id,
                 title=title,
