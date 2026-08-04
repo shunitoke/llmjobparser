@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import re
+import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -113,10 +114,15 @@ class HHScraper(BaseScraper):
                 if not cards:
                     break
 
+                if page == 0:
+                    rss_dates = await self._fetch_rss_dates(query, city, constraints)
+                else:
+                    rss_dates = {}
+
                 for card in cards:
                     if len(vacancies) >= max_results:
                         break
-                    v = self._parse_card(card)
+                    v = self._parse_card(card, rss_dates=rss_dates)
                     if v:
                         vacancies.append(v)
 
@@ -128,7 +134,53 @@ class HHScraper(BaseScraper):
 
         return vacancies
 
-    def _parse_card(self, card) -> Optional[Dict]:
+    async def _fetch_rss_dates(
+        self, query: str, city: str = "", constraints: Optional[Dict] = None
+    ) -> Dict[str, str]:
+        """Fetch publication dates from hh.ru RSS feed. Returns {vacancy_id: iso_date}."""
+        dates: Dict[str, str] = {}
+        try:
+            params: Dict = {"text": query, "per_page": 100}
+            c = constraints or {}
+            if city:
+                city_lower = city.lower().strip()
+                if city_lower in self.CITY_IDS:
+                    params["area"] = self.CITY_IDS[city_lower]
+            salary_from = c.get("salary_from")
+            if salary_from and isinstance(salary_from, (int, float)) and salary_from > 0:
+                params["salary"] = int(salary_from)
+                params["only_with_salary"] = "true"
+            schedule = c.get("schedule")
+            remote = c.get("remote")
+            if schedule:
+                params["schedule"] = schedule
+            elif remote:
+                params["schedule"] = "remote"
+            employment = c.get("employment")
+            if employment:
+                params["employment"] = employment
+            experience = c.get("experience")
+            if experience:
+                params["experience"] = experience
+
+            base = await self._get_base_url()
+            resp = await self._get(f"{base}/search/vacancy/rss", params=params)
+            if not resp:
+                return dates
+            root = ET.fromstring(resp.text)
+            for item in root.findall(".//item"):
+                link_el = item.find("link")
+                pub_el = item.find("pubDate")
+                if link_el is not None and pub_el is not None and pub_el.text:
+                    link = link_el.text or ""
+                    match = re.search(r"/vacancy/(\d+)", link)
+                    if match:
+                        dates[match.group(1)] = pub_el.text.strip()
+        except Exception as exc:
+            logger.warning("[hh] RSS date fetch error: %s", exc)
+        return dates
+
+    def _parse_card(self, card, rss_dates: Optional[Dict[str, str]] = None) -> Optional[Dict]:
         try:
             title_elem = (
                 card.select_one("[data-qa='serp-item__title']")
@@ -175,6 +227,8 @@ class HHScraper(BaseScraper):
                 dt = date_elem.get("datetime") or date_elem.get_text(strip=True)
                 if dt:
                     published_at = dt
+            if not published_at and rss_dates and source_id in rss_dates:
+                published_at = rss_dates[source_id]
             if not published_at:
                 published_at = None
 
