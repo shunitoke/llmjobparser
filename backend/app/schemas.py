@@ -25,6 +25,7 @@ class JobResponse(BaseModel):
     is_match: Optional[bool]
     match_reason: Optional[str]
     rejection_reason: Optional[str] = None
+    analyzed_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

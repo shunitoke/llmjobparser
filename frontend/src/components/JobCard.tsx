@@ -14,7 +14,7 @@ export function JobCard({ job }: JobCardProps) {
   const isMatch = job.is_match === true;
   const source = getJobSourceLabel(job);
   const sourceBadgeClass = getJobSourceBadgeClass(job);
-  const relativeDate = formatRelativeDate(job.published_at);
+  const relativeDate = formatRelativeDate(job.published_at || job.analyzed_at);
   const hasExtra = Boolean(job.match_reason || job.description || job.rejection_reason) || Boolean(job.url);
 
   return (

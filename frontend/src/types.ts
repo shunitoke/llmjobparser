@@ -14,6 +14,7 @@ export interface Job {
   is_match: boolean | null;
   match_reason: string | null;
   rejection_reason: string | null;
+  analyzed_at?: string | null;
 }
 
 export interface SearchSession {

@@ -533,6 +533,7 @@ async def _run_search_inner(
                     description=detail.get("description", v.get("description", "")),
                     url=v.get("url", ""),
                     published_at=published_dt,
+                    analyzed_at=datetime.utcnow(),
                 )
                 db.add(job)
 
@@ -582,6 +583,7 @@ async def _run_search_inner(
                     url=v.get("url", ""),
                     published_at=published_dt,
                     rejection_reason=reason,
+                    analyzed_at=datetime.utcnow(),
                 )
                 db.add(job)
 
